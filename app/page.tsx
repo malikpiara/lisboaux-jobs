@@ -1,29 +1,26 @@
 import { buildJobUrl, formatRelativeDate } from '@/lib/utils';
 import Link from 'next/link';
 import { Job } from '@/lib/types';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-const listOfJobs: Job[] = [
-  {
-    id: 0,
-    title: 'Product Designer',
-    company: 'Airbnb',
-    location: 'Porto',
-    url: 'https://lisboaux.com/',
-    submitted_on: '2026-01-17T10:00:00.000Z',
-    is_active: true,
-  },
-  {
-    id: 1,
-    title: 'Job Board Manager (Volunteer)',
-    company: 'LisboaUX',
-    location: 'Lisboa',
-    url: 'https://lisboaux.com/',
-    submitted_on: '2026-01-18T14:30:00.000Z',
-    is_active: false,
-  },
-];
+async function getJobs(): Promise<Job[]> {
+  const supabase = createServerSupabaseClient();
 
-export default function Home() {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('*')
+    .order('submitted_on', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching jobs:', error);
+    return [];
+  }
+
+  return data ?? [];
+}
+
+export default async function Home() {
+  const jobs = await getJobs();
   return (
     <div className='flex min-h-screen items-center justify-center bg-white font-sans'>
       <div className='flex min-h-screen w-full max-w-3xl flex-col items-center py-4 px-2 sm:px-16 bg-white sm:items-start'>
@@ -34,7 +31,7 @@ export default function Home() {
         </header>
         <main className='w-full bg-[#FFF7F1] rounded-b-sm'>
           <ul className='space-y-2 mt-2 p-2'>
-            {listOfJobs
+            {jobs
               .filter((job) => job.is_active)
               .map((job) => (
                 <li
