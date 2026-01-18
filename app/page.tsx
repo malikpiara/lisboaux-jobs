@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Job } from '@/lib/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 async function getJobs(): Promise<Job[]> {
   const supabase = createServerSupabaseClient();
 

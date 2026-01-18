@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${job.title}* at ${job.company} \n ${job.location}`,
+            text: `* :tada: New job posted!* \n *${job.title}*  \n ${job.company} ·  ${job.location}.`,
           },
         },
         {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
                 type: 'plain_text',
                 text: 'More Jobs',
               },
-              url: 'https://jobs.lisboaux.com/?utm_source=LisboaUX',
+              url: 'https://jobs.lisboaux.com/?utm_source=LisboaUX&utm_medium=Slack',
             },
             {
               type: 'button',
