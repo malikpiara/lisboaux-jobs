@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `* :tada: New job posted!* \n *${job.title}*  \n ${job.company} ·  ${job.location}.`,
+            text: `* :tada: New job posted!* \n\n *${job.title}*  \n ${job.company} ·  ${job.location}`,
           },
         },
         {
