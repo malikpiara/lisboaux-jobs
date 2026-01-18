@@ -38,7 +38,7 @@ export function JobList({ jobs }: JobListProps) {
               <div className='text-lg'>{job.title}</div>
             </Link>
             <div className='flex text-sm gap-2'>
-              <div>{job.company}</div>
+              <div className='font-medium'>{job.company}</div>
               <div>{job.location}</div>
               <div>{formatRelativeDate(job.submitted_on)}</div>
             </div>
