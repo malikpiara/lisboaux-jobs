@@ -37,10 +37,17 @@ export async function POST(request: NextRequest) {
     const slackMessage = {
       blocks: [
         {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: `${job.title} at ${job.company}`,
+          },
+        },
+        {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `🎉 *New job posted!*\n\n*${job.title}*\nat ${job.company} · ${job.location}`,
+            text: `📍 ${job.location}`,
           },
         },
         {
@@ -50,7 +57,7 @@ export async function POST(request: NextRequest) {
               type: 'button',
               text: {
                 type: 'plain_text',
-                text: '📋 View Job Board',
+                text: 'More Jobs',
               },
               url: 'https://jobs.lisboaux.com/',
             },
@@ -58,7 +65,7 @@ export async function POST(request: NextRequest) {
               type: 'button',
               text: {
                 type: 'plain_text',
-                text: '🔗 View Job Post',
+                text: 'View Job',
               },
               url: job.url,
             },
