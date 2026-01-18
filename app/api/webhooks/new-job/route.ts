@@ -1,3 +1,4 @@
+import { buildJobUrl } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 // The shape of data Supabase sends for INSERT events
@@ -18,6 +19,11 @@ type SupabaseWebhookPayload = {
 };
 
 export async function POST(request: NextRequest) {
+  // Verify request is from Supabase
+  const secret = request.headers.get('x-webhook-secret');
+  if (secret !== process.env.SUPABASE_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const payload: SupabaseWebhookPayload = await request.json();
 
@@ -37,17 +43,10 @@ export async function POST(request: NextRequest) {
     const slackMessage = {
       blocks: [
         {
-          type: 'header',
-          text: {
-            type: 'plain_text',
-            text: `${job.title} at ${job.company}`,
-          },
-        },
-        {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `📍 ${job.location}`,
+            text: `*${job.title}* at ${job.company} \n ${job.location}`,
           },
         },
         {
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
                 type: 'plain_text',
                 text: 'More Jobs',
               },
-              url: 'https://jobs.lisboaux.com/',
+              url: 'https://jobs.lisboaux.com/?utm_source=LisboaUX',
             },
             {
               type: 'button',
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
                 type: 'plain_text',
                 text: 'View Job',
               },
-              url: job.url,
+              url: buildJobUrl(job.url),
             },
           ],
         },
