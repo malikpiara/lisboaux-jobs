@@ -34,8 +34,8 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jobSchema) }}
       />
 
-      <div className='flex min-h-screen items-center justify-center bg-white font-sans'>
-        <div className='flex min-h-screen w-full max-w-3xl flex-col items-center py-4 px-2 sm:px-16 bg-white sm:items-start'>
+      <div className='flex flex-col items-center justify-center bg-white font-sans'>
+        <div className='flex w-full max-w-3xl flex-col items-center py-4 px-2 sm:px-16 bg-white sm:items-start'>
           <header className='w-full bg-[#3847E6] text-white p-1 rounded-t-sm'>
             <div className='font-semibold'>
               <Link href={'/'}>Design Jobs</Link>
@@ -45,6 +45,23 @@ export default async function Home() {
             <JobList jobs={jobs} />
           </main>
         </div>
+        <footer className='justify-between gap-6 flex sm:items-center items-start max-w-3xl w-full p-2 flex-col-reverse sm:flex-row sm:px-16 opacity-80 text-sm'>
+          <div className='sm:self-start'>⛹️ Only You Know Who You Can Be</div>
+          <section className='flex flex-col gap-2'>
+            <div>
+              <Link
+                href={'https://whatsapp.com/channel/0029VbBgMmb6hENv6HkmMt2R'}
+              >
+                Job Alerts on WhatsApp
+              </Link>
+            </div>
+            <div>
+              <Link href={'https://lisboaux.com/slack'}>
+                Join our Slack Community
+              </Link>
+            </div>
+          </section>
+        </footer>
       </div>
     </>
   );
