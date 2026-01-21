@@ -1,5 +1,6 @@
 import { buildJobUrl } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendToTelegram } from '@/lib/telegram';
 
 // The shape of data Supabase sends for INSERT events
 type SupabaseWebhookPayload = {
@@ -12,6 +13,7 @@ type SupabaseWebhookPayload = {
     company: string;
     location: string;
     url: string;
+    short_code?: string;
     submitted_on: string;
     is_active: boolean;
   };
@@ -82,6 +84,13 @@ export async function POST(request: NextRequest) {
     if (!slackResponse.ok) {
       console.error('Slack API error:', await slackResponse.text());
       return NextResponse.json({ error: 'Slack API error' }, { status: 500 });
+    }
+
+    // Send to Telegram
+    const telegramResult = await sendToTelegram(job);
+    if (!telegramResult.success) {
+      console.error('Telegram error:', telegramResult.error);
+      // Don't fail the whole request if Telegram fails - Slack already worked
     }
 
     return NextResponse.json({ message: 'Notification sent' }, { status: 200 });
