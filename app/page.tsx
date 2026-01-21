@@ -56,6 +56,9 @@ export default async function Home() {
               </Link>
             </div>
             <div>
+              <Link href={'https://t.me/ux_jobs'}>Job Alerts on Telegram</Link>
+            </div>
+            <div>
               <Link href={'https://lisboaux.com/slack'}>
                 Join our Slack Community
               </Link>
