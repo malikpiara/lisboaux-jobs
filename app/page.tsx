@@ -35,19 +35,18 @@ export default async function Home() {
       />
 
       <div className='flex flex-col items-center justify-center bg-white font-sans'>
-        <div className='flex w-full max-w-3xl flex-col items-center py-4 px-2 sm:px-16 bg-white sm:items-start'>
+        <div className='flex w-full max-w-195 flex-col items-center py-4 px-2 sm:px-16 bg-white sm:items-start'>
           <header className='w-full bg-[#3847E6] text-white p-1 rounded-t-sm'>
-            <div className='font-semibold'>
+            <div className='font-semibold ml-1 flex gap-3'>
               <Link href={'/'}>Design Jobs</Link>
             </div>
           </header>
-          <main className='w-full bg-[#FFF7F1] rounded-b-sm'>
+          <main className='w-full bg-[#FFF6F1] rounded-b-sm'>
             <JobList jobs={jobs} />
           </main>
         </div>
-        <footer className='justify-between gap-6 flex sm:items-center items-start max-w-3xl w-full p-2 flex-col-reverse sm:flex-row sm:px-16 opacity-80 text-sm'>
-          <div className='sm:self-start'>⛹️ Only You Know Who You Can Be</div>
-          <section className='flex flex-col gap-2'>
+        <footer className='gap-6 flex  items-start max-w-195 w-full p-2 flex-col-reverse sm:flex-row sm:px-16 text-base sm:text-sm text-[#3d2800]'>
+          <section className='flex flex-col sm:flex-row gap-5 mb-3'>
             <div>
               <Link
                 href={'https://whatsapp.com/channel/0029VbBgMmb6hENv6HkmMt2R'}
@@ -55,9 +54,11 @@ export default async function Home() {
                 Job Alerts on WhatsApp
               </Link>
             </div>
+            <div className='hidden sm:block'>|</div>
             <div>
               <Link href={'https://t.me/ux_jobs'}>Job Alerts on Telegram</Link>
             </div>
+            <div className='hidden sm:block'>|</div>
             <div>
               <Link href={'https://lisboaux.com/slack'}>
                 Join our Slack Community

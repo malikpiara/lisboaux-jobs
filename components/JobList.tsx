@@ -22,7 +22,7 @@ export function JobList({ jobs }: JobListProps) {
   };
 
   return (
-    <ul className='space-y-2 mt-2 p-2'>
+    <ul className='space-y-2 mt-2 p-2 text-[#3d2800]'>
       {jobs
         .filter((job) => job.is_active)
         .map((job) => (
