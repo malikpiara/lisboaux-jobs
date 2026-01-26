@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { NextRequest } from 'next/server';
 
@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { code } = await params;
 
-  const supabase = createServerSupabaseClient();
+  const supabase = await createClient();
 
   const { data: job, error } = await supabase
     .from('jobs')

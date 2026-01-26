@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { Job } from '@/lib/types';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { JobList } from '@/components/JobList';
 import { generateJobPostingSchema } from '@/lib/seo/jobPostingSchema';
 
 export const dynamic = 'force-dynamic';
 
 async function getJobs(): Promise<Job[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('jobs')

@@ -1,8 +1,43 @@
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-export function createServerSupabaseClient() {
-  return createClient(
+/**
+ * Creates a Supabase client for use in Server Components, Route Handlers, and Server Actions.
+ *
+ * This client:
+ * - Reads session from cookies (sent with the request)
+ * - Can set cookies (for Route Handlers and Server Actions)
+ * - Knows who's logged in on the server side
+ *
+ * IMPORTANT: This must be called fresh for each request (don't cache the client).
+ *
+ * Usage:
+ *   import { createClient } from '@/lib/supabase/server'
+ *   const supabase = await createClient()
+ *   const { data: { user } } = await supabase.auth.getUser()
+ */
+export async function createClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options),
+            );
+          } catch {
+            // The `setAll` method is called from a Server Component.
+            // This can be ignored if you have middleware refreshing sessions.
+          }
+        },
+      },
+    },
   );
 }

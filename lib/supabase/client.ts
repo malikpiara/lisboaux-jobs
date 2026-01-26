@@ -1,6 +1,21 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+/**
+ * Creates a Supabase client for use in Client Components (browser).
+ *
+ * This client automatically handles:
+ * - Reading/writing session cookies
+ * - Token refresh
+ * - Syncing auth state across tabs
+ *
+ * Usage:
+ *   'use client'
+ *   import { createClient } from '@/lib/supabase/client'
+ *   const supabase = createClient()
+ */
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+}
