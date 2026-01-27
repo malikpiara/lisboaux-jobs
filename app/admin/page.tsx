@@ -82,7 +82,6 @@ export default async function AdminPage() {
     .from('profiles')
     .select('id, full_name, username, points')
     .in('user_role', ['admin', 'owner'])
-    .gt('points', 0)
     .order('points', { ascending: false });
 
   if (error) {
