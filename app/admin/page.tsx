@@ -104,10 +104,13 @@ export default async function AdminPage() {
   return (
     <main className='min-h-screen bg-[#FFF6F1]'>
       {/* Header */}
-      <header className='bg-white shadow-sm'>
+      <header className='bg-white shadow-2xs'>
         <div className='max-w-5xl mx-auto px-4 py-4 flex items-center justify-between'>
-          <Link href='/' className='font-semibold text-lg'>
-            LisboaUX Jobs
+          <Link
+            href='/'
+            className='font-semibold bg-[#0237CF] text-white p-2 px-4 rounded-full text-sm'
+          >
+            View Website
           </Link>
           <div className='flex items-center gap-4'>
             <span className='text-sm text-gray-600'>
