@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { LeaderboardChart } from '@/components/LeaderboardChart';
 
 /**
  * Admin Page (Protected + Role-Based)
@@ -27,6 +28,11 @@ type Profile = {
   user_role: 'owner' | 'admin' | 'user';
   points: number;
 };
+
+function getFirstName(fullName: string | null): string | null {
+  if (!fullName) return null;
+  return fullName.split(' ')[0];
+}
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -69,6 +75,31 @@ export default async function AdminPage() {
   const isAdmin =
     profile.user_role === 'admin' || profile.user_role === 'owner';
   const isOwner = profile.user_role === 'owner';
+
+  // Fetch only admins and owners with points > 0
+  // These are the people who can contribute jobs
+  const { data: profiles, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, username, points')
+    .in('user_role', ['admin', 'owner'])
+    .gt('points', 0)
+    .order('points', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching leaderboard:', error);
+    return (
+      <div className='container mx-auto py-8'>
+        <p className='text-red-500'>Failed to load leaderboard</p>
+      </div>
+    );
+  }
+
+  // Transform to chart-friendly format with first names only
+  const leaderboardData = (profiles ?? []).map((profile) => ({
+    id: profile.id,
+    name: getFirstName(profile.full_name) || profile.username || 'Anonymous',
+    points: profile.points,
+  }));
 
   return (
     <main className='min-h-screen bg-[#FFF6F1]'>
@@ -141,7 +172,7 @@ export default async function AdminPage() {
         )}
 
         {/* Role-Based UI: Owner Only */}
-        {isOwner && (
+        {/* {isOwner && (
           <section className='mb-8'>
             <h2 className='text-lg font-medium mb-4 flex items-center gap-2'>
               <span>👑</span> Owner Tools
@@ -161,19 +192,23 @@ export default async function AdminPage() {
               />
             </div>
           </section>
-        )}
+        )} */}
 
         {/* All Users Section */}
         <section>
-          <h2 className='text-lg font-medium mb-4 flex items-center gap-2'>
-            <span>⭐</span> Your Activity
-          </h2>
-          <div className='bg-white rounded-lg shadow-sm p-6'>
-            <p className='text-gray-500 text-sm'>
-              {isAdmin
-                ? 'Your recent job submissions and points history will appear here.'
-                : 'Your saved jobs and activity will appear here.'}
-            </p>
+          <div className='mt-2'>
+            {isAdmin ? (
+              <>
+                <div className='max-w-2xl mx-0'>
+                  <LeaderboardChart data={leaderboardData} />
+                </div>
+              </>
+            ) : (
+              <p className='text-gray-500 text-sm'>
+                Your saved jobs and activity will appear here.
+              </p>
+            )}
+
             {/* TODO: Add actual activity feed */}
           </div>
         </section>
