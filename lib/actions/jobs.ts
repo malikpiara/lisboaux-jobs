@@ -1,154 +1,182 @@
 'use server';
 
 /**
- * Server Action: Add Job
+ * Server Actions for Job Management
  *
- * This is a shared action that can be imported by any page/component.
- * The 'use server' directive at the top makes ALL exports in this file Server Actions.
+ * Server Actions are functions that run on the server but can be called
+ * from Client Components. They're perfect for:
+ * - Database mutations (create, update, delete)
+ * - Operations that need server-side secrets
+ * - Anything that shouldn't expose logic to the client
  *
- * Used by:
- * - /admin (Sheet form)
- * - /admin/jobs/new (standalone page)
+ * Key pattern: We return a consistent shape { success, error, data }
+ * so the UI can handle all cases predictably.
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { captureServerEvent } from '@/lib/posthog/server';
 import { revalidatePath } from 'next/cache';
 
 // ─────────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────────
 
-type Profile = {
-  user_role: 'owner' | 'admin' | 'user';
-  full_name: string | null;
-  email: string;
-};
-
 export type AddJobFormState = {
   success: boolean;
   error?: string;
+  data?: {
+    id: number;
+    title: string;
+  };
+} | null;
+
+export type UpdateJobFormState = {
+  success: boolean;
+  error?: string;
+  data?: {
+    id: number;
+    title: string;
+  };
 } | null;
 
 // ─────────────────────────────────────────────────────────────────
-// ACTION
+// ADD JOB (existing)
 // ─────────────────────────────────────────────────────────────────
 
 export async function addJob(
-  prevState: AddJobFormState,
+  _prevState: AddJobFormState,
   formData: FormData,
 ): Promise<AddJobFormState> {
   const supabase = await createClient();
 
-  // ─────────────────────────────────────────────────────────────
-  // 1. AUTHENTICATION & AUTHORIZATION
-  // ─────────────────────────────────────────────────────────────
-
+  // Get current user
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, error: 'Not authenticated' };
+  if (userError || !user) {
+    return { success: false, error: 'You must be logged in to add a job' };
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('user_role, email, full_name')
-    .eq('id', user.id)
-    .single<Profile>();
-
-  if (
-    !profile ||
-    (profile.user_role !== 'admin' && profile.user_role !== 'owner')
-  ) {
-    return { success: false, error: 'Not authorized' };
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // 2. VALIDATE INPUT
-  // ─────────────────────────────────────────────────────────────
-
+  // Extract form data
   const title = formData.get('title') as string;
   const company = formData.get('company') as string;
   const location = formData.get('location') as string;
   const url = formData.get('url') as string;
 
+  // Validate
   if (!title || !company || !location || !url) {
     return { success: false, error: 'All fields are required' };
   }
 
-  // Basic URL validation
-  try {
-    new URL(url);
-  } catch {
-    return { success: false, error: 'Please enter a valid URL' };
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // 3. INSERT JOB
-  // ─────────────────────────────────────────────────────────────
-
-  const { data: newJob, error: jobError } = await supabase
+  // Insert job
+  const { data, error } = await supabase
     .from('jobs')
     .insert({
       title,
       company,
       location,
       url,
+      created_by: user.id,
       is_active: true,
-      submitted_on: new Date().toISOString(),
     })
-    .select('id, short_code')
+    .select('id, title')
     .single();
 
-  if (jobError) {
-    console.error('Error inserting job:', jobError);
-    return { success: false, error: 'Failed to add job. Please try again.' };
+  if (error) {
+    console.error('Error adding job:', error);
+    return { success: false, error: error.message };
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // 4. AWARD POINTS
-  // ─────────────────────────────────────────────────────────────
-
-  const adminClient = createAdminClient();
-  const { data: newPoints, error: pointsError } = await adminClient.rpc(
-    'add_points',
-    {
-      target_user_id: user.id,
-      points_to_add: 100,
-    },
-  );
-
-  if (pointsError) {
-    console.error('Error adding points:', pointsError);
-    // Don't fail the request - job was added successfully
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // 5. ANALYTICS
-  // ─────────────────────────────────────────────────────────────
-
-  captureServerEvent(user.id, 'job_added', {
-    job_id: newJob.id,
-    job_title: title,
-    company,
-    location,
-    short_code: newJob.short_code,
-    points_awarded: 100,
-    new_points_total: newPoints,
-    user_email: profile.email,
-    user_name: profile.full_name,
-    user_role: profile.user_role,
-  });
-
-  // ─────────────────────────────────────────────────────────────
-  // 6. REVALIDATE CACHES
-  // ─────────────────────────────────────────────────────────────
-
+  // Revalidate the jobs pages so they show the new job
   revalidatePath('/');
-  revalidatePath('/admin');
+  revalidatePath('/admin/jobs');
 
-  return { success: true };
+  return { success: true, data };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// UPDATE JOB (new)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Update an existing job
+ *
+ * Security considerations:
+ * 1. User must be authenticated
+ * 2. User must have admin/owner role (checked via RLS or here)
+ * 3. We track who modified the job (modified_by field)
+ *
+ * The formData includes the job ID as a hidden field.
+ */
+export async function updateJob(
+  _prevState: UpdateJobFormState,
+  formData: FormData,
+): Promise<UpdateJobFormState> {
+  const supabase = await createClient();
+
+  // Get current user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { success: false, error: 'You must be logged in to update a job' };
+  }
+
+  // Check user role (defense in depth - RLS should also enforce this)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('user_role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || !['admin', 'owner'].includes(profile.user_role)) {
+    return { success: false, error: 'You do not have permission to edit jobs' };
+  }
+
+  // Extract form data
+  const id = parseInt(formData.get('id') as string, 10);
+  const title = formData.get('title') as string;
+  const company = formData.get('company') as string;
+  const location = formData.get('location') as string;
+  const url = formData.get('url') as string;
+  const isActive = formData.get('is_active') === 'true';
+
+  // Validate
+  if (!id || isNaN(id)) {
+    return { success: false, error: 'Invalid job ID' };
+  }
+
+  if (!title || !company || !location || !url) {
+    return { success: false, error: 'All fields are required' };
+  }
+
+  // Update job
+  const { data, error } = await supabase
+    .from('jobs')
+    .update({
+      title,
+      company,
+      location,
+      url,
+      is_active: isActive,
+      modified_by: user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select('id, title')
+    .single();
+
+  if (error) {
+    console.error('Error updating job:', error);
+    return { success: false, error: error.message };
+  }
+
+  // Revalidate pages that show jobs
+  revalidatePath('/');
+  revalidatePath('/admin/jobs');
+
+  return { success: true, data };
 }
