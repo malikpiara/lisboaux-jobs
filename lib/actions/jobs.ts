@@ -1,59 +1,44 @@
-import { redirect } from 'next/navigation';
+'use server';
+
+/**
+ * Server Action: Add Job
+ *
+ * This is a shared action that can be imported by any page/component.
+ * The 'use server' directive at the top makes ALL exports in this file Server Actions.
+ *
+ * Used by:
+ * - /admin (Sheet form)
+ * - /admin/jobs/new (standalone page)
+ */
+
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { captureServerEvent } from '@/lib/posthog/server';
 import { revalidatePath } from 'next/cache';
-import Link from 'next/link';
-import { JobForm } from './job-form';
-
-/**
- * Add Job Page
- *
- * Server Component responsibilities:
- * - Authentication: Check if user is logged in
- * - Authorization: Check if user has admin/owner role
- * - Define Server Action: The actual database logic
- *
- * The interactive form is delegated to <JobForm /> (Client Component)
- */
 
 // ─────────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────────
 
 type Profile = {
-  id: string;
   user_role: 'owner' | 'admin' | 'user';
   full_name: string | null;
   email: string;
 };
 
-type FormState = {
+export type AddJobFormState = {
   success: boolean;
   error?: string;
 } | null;
 
 // ─────────────────────────────────────────────────────────────────
-// SERVER ACTION
+// ACTION
 // ─────────────────────────────────────────────────────────────────
 
-/**
- * Server Action for adding a job
- *
- * Note the signature change for useActionState:
- * - First param: previous state (from useActionState)
- * - Second param: form data
- * - Returns: new state (instead of throwing/redirecting)
- *
- * This pattern allows the Client Component to show success/error messages
- * without a full page navigation.
- */
-async function addJob(
-  prevState: FormState,
+export async function addJob(
+  prevState: AddJobFormState,
   formData: FormData,
-): Promise<FormState> {
-  'use server';
-
+): Promise<AddJobFormState> {
   const supabase = await createClient();
 
   // ─────────────────────────────────────────────────────────────
@@ -72,7 +57,7 @@ async function addJob(
     .from('profiles')
     .select('user_role, email, full_name')
     .eq('id', user.id)
-    .single<Pick<Profile, 'user_role' | 'email' | 'full_name'>>();
+    .single<Profile>();
 
   if (
     !profile ||
@@ -124,7 +109,7 @@ async function addJob(
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 4. AWARD POINTS (non-blocking)
+  // 4. AWARD POINTS
   // ─────────────────────────────────────────────────────────────
 
   const adminClient = createAdminClient();
@@ -166,65 +151,4 @@ async function addJob(
   revalidatePath('/admin');
 
   return { success: true };
-}
-
-// ─────────────────────────────────────────────────────────────────
-// PAGE COMPONENT
-// ─────────────────────────────────────────────────────────────────
-
-export default async function AddJobPage() {
-  const supabase = await createClient();
-
-  // ─────────────────────────────────────────────────────────────
-  // AUTHENTICATION CHECK
-  // ─────────────────────────────────────────────────────────────
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/signin');
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // AUTHORIZATION CHECK
-  // ─────────────────────────────────────────────────────────────
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, user_role, full_name, email')
-    .eq('id', user.id)
-    .single<Profile>();
-
-  if (
-    !profile ||
-    (profile.user_role !== 'admin' && profile.user_role !== 'owner')
-  ) {
-    redirect('/admin?error=unauthorized');
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // RENDER
-  // ─────────────────────────────────────────────────────────────
-
-  return (
-    <main className='min-h-screen bg-gray-50'>
-      {/* Header - stays in Server Component (no interactivity needed) */}
-      <header className='bg-white shadow-sm'>
-        <div className='max-w-2xl mx-auto px-4 py-4 flex items-center justify-between'>
-          <div className='flex items-center gap-4'>
-            <Link href='/admin' className='text-gray-500 hover:text-gray-700'>
-              ← Back
-            </Link>
-            <h1 className='font-semibold'>Add Job</h1>
-          </div>
-          <span className='text-sm text-gray-500'>+100 points</span>
-        </div>
-      </header>
-
-      {/* Form - Client Component handles all interactivity */}
-      <JobForm addJob={addJob} />
-    </main>
-  );
 }

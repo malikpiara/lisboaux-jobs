@@ -37,7 +37,7 @@ export function LeaderboardChart({ data }: LeaderboardChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>🏆 Contributor Leaderboard</CardTitle>
+          <CardTitle>🏆 Team Leaderboard</CardTitle>
           <CardDescription>No contributions yet. Be the first!</CardDescription>
         </CardHeader>
       </Card>
@@ -47,7 +47,7 @@ export function LeaderboardChart({ data }: LeaderboardChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>🏆 Contributor Leaderboard</CardTitle>
+        <CardTitle>🏆 Team Leaderboard</CardTitle>
         <CardDescription></CardDescription>
       </CardHeader>
       <CardContent>
@@ -79,6 +79,7 @@ export function LeaderboardChart({ data }: LeaderboardChartProps) {
               dataKey='points'
               fill='var(--color-points)'
               radius={[4, 4, 0, 0]}
+              minPointSize={3}
             />
           </BarChart>
         </ChartContainer>

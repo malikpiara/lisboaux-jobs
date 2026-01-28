@@ -41,7 +41,7 @@ export default async function Home() {
               <Link href={'/'}>Design Jobs</Link>
             </div>
           </header>
-          <main className='w-full bg-[#FFF6F1] rounded-b-sm'>
+          <main className='w-full bg-background rounded-b-sm'>
             <JobList jobs={jobs} />
           </main>
         </div>

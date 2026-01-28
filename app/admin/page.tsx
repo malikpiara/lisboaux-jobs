@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { LeaderboardChart } from '@/components/LeaderboardChart';
+import { AddJobSheet } from '@/components/add-job-sheet';
 
 /**
  * Admin Page (Protected + Role-Based)
@@ -101,9 +102,9 @@ export default async function AdminPage() {
   }));
 
   return (
-    <main className='min-h-screen bg-[#FFF6F1]'>
+    <main className='min-h-screen bg-background'>
       {/* Header */}
-      <header className='bg-white shadow-2xs'>
+      {/* <header className='bg-white shadow-2xs'>
         <div className='max-w-5xl mx-auto px-4 py-4 flex items-center justify-between'>
           <Link
             href='/'
@@ -134,13 +135,13 @@ export default async function AdminPage() {
             </a>
           </div>
         </div>
-      </header>
+      </header> */}
 
       <div className='max-w-5xl mx-auto px-4 py-8'>
         {/* Welcome Section */}
         <div className='mb-8'>
           <h1 className='text-2xl font-semibold'>
-            Welcome back, {profile.full_name?.split(' ')[0] || 'there'}!
+            👋 Welcome back, {profile.full_name?.split(' ')[0] || 'there'}!
           </h1>
           <p className='text-gray-600 mt-1'>
             You have <strong>{profile.points}</strong> points.
@@ -151,14 +152,10 @@ export default async function AdminPage() {
         {isAdmin && (
           <section className='mb-8'>
             <h2 className='text-lg font-medium mb-4 flex items-center gap-2'>
-              <span>🔧</span> Admin Tools
+              <span>🧰</span> Community Leader Tools
             </h2>
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-              <AdminCard
-                title='Add Job'
-                description='Post a new job listing to the board'
-                href='/admin/jobs/new'
-              />
+              <AddJobSheet />
               <AdminCard
                 title='Manage Jobs'
                 description='Edit or deactivate existing listings'
@@ -166,7 +163,7 @@ export default async function AdminPage() {
               />
               <AdminCard
                 title='Leaderboard'
-                description='See contributor rankings'
+                description='See team rankings'
                 href='/admin/leaderboard'
               />
             </div>
@@ -210,8 +207,6 @@ export default async function AdminPage() {
                 Your saved jobs and activity will appear here.
               </p>
             )}
-
-            {/* TODO: Add actual activity feed */}
           </div>
         </section>
       </div>
