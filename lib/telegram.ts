@@ -30,8 +30,7 @@ export async function sendToTelegram(
   // Build message with actual newlines (not \n strings)
   const message = `<b>${escapeHtml(job.title)}</b>
 ${escapeHtml(job.company)}
-📍 ${escapeHtml(job.location)}
-
+📍${escapeHtml(job.location)}
 ${jobUrl}`;
 
   const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
