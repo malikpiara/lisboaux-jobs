@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: 'UX Jobs',
   description:
     'Find a job in UX design and digital product design in Portugal.',
+  other: {
+    'theme-color': '#0237CF',
+  },
 };
 
 export default function RootLayout({
