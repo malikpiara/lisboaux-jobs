@@ -27,7 +27,7 @@ export function JobList({ jobs }: JobListProps) {
         .filter((job) => job.is_active)
         .map((job) => (
           <li
-            className='list-none hover:opacity-50 transition-colors cursor-pointer'
+            className='list-none hover:bg-muted rounded-sm transition-all cursor-pointer p-[0.1rem] border border-transparent hover:border-border border-dashed'
             key={job.id}
           >
             <Link
@@ -35,12 +35,20 @@ export function JobList({ jobs }: JobListProps) {
               href={buildJobUrl(job.url)}
               target='_blank'
             >
-              <div className='text-lg'>{job.title}</div>
+              <div className='text-lg font-normal text-foreground'>
+                {job.title}
+              </div>
             </Link>
-            <div className='flex text-sm gap-2'>
+            <div className='flex text-sm gap-1 text-gray-900'>
               <div className='font-medium'>{job.company}</div>
-              <div>{job.location}</div>
-              <div>{formatRelativeDate(job.submitted_on)}</div>
+              <div>
+                <span>| </span>
+                {job.location}
+              </div>
+              <div>
+                <span>| </span>
+                {formatRelativeDate(job.submitted_on)}
+              </div>
             </div>
           </li>
         ))}
