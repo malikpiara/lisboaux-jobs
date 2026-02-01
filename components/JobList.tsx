@@ -68,10 +68,10 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
   return (
     <div>
       {/* Job listings */}
-      <ul className='space-y-2 mt-2 p-2 text-[#3d2800]'>
+      <ul className='space-y-2 sm:mt-2 p-2 text-[#3d2800]'>
         {visibleJobs.map((job) => (
           <li
-            className='list-none hover:bg-muted rounded-sm transition-all cursor-pointer p-[0.1rem] border border-transparent hover:border-border border-dashed'
+            className='list-none hover:bg-muted dark:hover:bg-white/16 rounded-sm transition-all cursor-pointer p-[0.1rem] border border-transparent hover:border-border border-dashed'
             key={job.id}
           >
             <Link
@@ -83,7 +83,7 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
                 {job.title}
               </div>
             </Link>
-            <div className='flex text-sm gap-1 text-gray-900'>
+            <div className='flex text-sm gap-1 text-gray-900 dark:text-[#ffffffc9]'>
               <div className='font-medium'>{job.company}</div>
               <div>
                 <span>| </span>
@@ -105,7 +105,7 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
           className='flex items-center justify-between px-2 py-4 border-t border-border'
         >
           {/* Page indicator */}
-          <p className='text-sm text-gray-700'>
+          <p className='text-sm text-gray-700 dark:text-[#ffffff]/50'>
             Page {currentPage} of {totalPages}
           </p>
 

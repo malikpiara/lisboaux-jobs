@@ -163,7 +163,7 @@ export function JobsDataTable<TData, TValue>({
       {/* ─────────────────────────────────────────────────────────── */}
       <div className='flex items-center gap-2'>
         <div className='relative flex-1 max-w-sm'>
-          <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
+          <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-[#ffffff]/50' />
           <Input
             placeholder='Search jobs, companies, locations...'
             value={globalFilter}
@@ -171,7 +171,7 @@ export function JobsDataTable<TData, TValue>({
             className='pl-9 bg-muted'
           />
         </div>
-        <span className='text-sm text-gray-500'>
+        <span className='text-sm text-gray-500 dark:text-[#ffffff]/50'>
           {table.getFilteredRowModel().rows.length} jobs
         </span>
       </div>
@@ -179,7 +179,7 @@ export function JobsDataTable<TData, TValue>({
       {/* ─────────────────────────────────────────────────────────── */}
       {/* TABLE */}
       {/* ─────────────────────────────────────────────────────────── */}
-      <div className='rounded-md border'>
+      <div className='rounded-md border overflow-hidden'>
         <Table>
           <TableHeader>
             {/**

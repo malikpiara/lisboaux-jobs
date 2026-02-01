@@ -34,8 +34,8 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jobSchema) }}
       />
 
-      <div className='flex flex-col items-center justify-center bg-white font-sans'>
-        <div className='flex w-full max-w-195 flex-col items-center py-4 px-2 sm:px-16 bg-white sm:items-start'>
+      <div className='flex flex-col items-center justify-center font-sans bg-card'>
+        <div className='flex w-full max-w-195 flex-col items-center py-4 px-2 sm:px-16 bg-card sm:items-start'>
           <header className='w-full bg-[#0237CF] text-white p-1 rounded-t-sm'>
             <div className='font-semibold ml-1 flex gap-3'>
               <Link href={'/'}>Design Jobs</Link>
@@ -45,10 +45,11 @@ export default async function Home() {
             <JobList jobs={jobs} />
           </main>
         </div>
-        <footer className='gap-6 flex  items-start max-w-195 w-full p-2 flex-col-reverse sm:flex-row sm:px-16 text-base  sm:text-sm text-[#3d2800]'>
+        <footer className='gap-6 flex  items-start max-w-195 w-full p-2 flex-col-reverse sm:flex-row sm:px-16 text-base  sm:text-sm text-[#3d2800] dark:text-[#ffffff]/50'>
           <section className='flex flex-col sm:flex-row gap-5 mb-3'>
             <div>
               <Link
+                className='dark:hover:text-white transition-colors'
                 href={'https://whatsapp.com/channel/0029VbBgMmb6hENv6HkmMt2R'}
               >
                 Job Alerts on WhatsApp
@@ -56,11 +57,19 @@ export default async function Home() {
             </div>
             <div className='hidden sm:block'>|</div>
             <div>
-              <Link href={'https://t.me/ux_jobs'}>Job Alerts on Telegram</Link>
+              <Link
+                className='dark:hover:text-white transition-colors'
+                href={'https://t.me/ux_jobs'}
+              >
+                Job Alerts on Telegram
+              </Link>
             </div>
             <div className='hidden sm:block'>|</div>
             <div>
-              <Link href={'https://lisboaux.com/slack'}>
+              <Link
+                className='dark:hover:text-white transition-colors'
+                href={'https://lisboaux.com/slack'}
+              >
                 Join our Slack Community
               </Link>
             </div>

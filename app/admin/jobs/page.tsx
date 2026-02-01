@@ -122,17 +122,19 @@ export default async function AdminJobsPage() {
         <div className='flex items-center justify-between mb-6 '>
           <div>
             <h1 className='text-2xl font-semibold'>Manage Jobs</h1>
-            <p className='text-gray-600 mt-1'>
+            <p className='text-gray-600 dark:text-[#ffffff]/50 mt-1'>
               View and edit all job listings. Click on a job title to edit.
             </p>
           </div>
 
           {/* Stats */}
           <div className='text-right'>
-            <p className='text-2xl font-semibold text-gray-900'>
+            <p className='text-2xl font-semibold text-gray-900 dark:text-card-foreground'>
               {jobs?.length ?? 0}
             </p>
-            <p className='text-sm text-gray-500'>Total jobs</p>
+            <p className='text-sm text-gray-500 dark:text-[#ffffff]/50'>
+              Total jobs
+            </p>
           </div>
         </div>
 

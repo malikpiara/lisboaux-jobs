@@ -55,35 +55,6 @@ export type Job = {
 export function getColumns(onRowClick: (job: Job) => void): ColumnDef<Job>[] {
   return [
     // ─────────────────────────────────────────────────────────────
-    // STATUS COLUMN
-    // ─────────────────────────────────────────────────────────────
-    {
-      accessorKey: 'is_active',
-      header: 'Status',
-      /**
-       * `cell` receives the cell context with:
-       * - row.original: the full data object
-       * - getValue(): the value for this column
-       */
-      cell: ({ row }) => {
-        const isActive = row.getValue('is_active') as boolean;
-        return (
-          <span
-            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-              isActive
-                ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            {isActive ? 'Active' : 'Inactive'}
-          </span>
-        );
-      },
-      // Smaller width for status
-      size: 100,
-    },
-
-    // ─────────────────────────────────────────────────────────────
     // TITLE COLUMN (clickable)
     // ─────────────────────────────────────────────────────────────
     {
@@ -109,7 +80,9 @@ export function getColumns(onRowClick: (job: Job) => void): ColumnDef<Job>[] {
       accessorKey: 'company',
       header: 'Company',
       cell: ({ row }) => (
-        <span className='text-gray-900'>{row.getValue('company')}</span>
+        <span className='text-gray-900 dark:text-[#ffffff]/50'>
+          {row.getValue('company')}
+        </span>
       ),
     },
 
@@ -120,7 +93,9 @@ export function getColumns(onRowClick: (job: Job) => void): ColumnDef<Job>[] {
       accessorKey: 'location',
       header: 'Location',
       cell: ({ row }) => (
-        <span className='text-gray-600'>{row.getValue('location')}</span>
+        <span className='text-gray-600 dark:text-[#ffffff]/50'>
+          {row.getValue('location')}
+        </span>
       ),
     },
 
@@ -152,7 +127,7 @@ export function getColumns(onRowClick: (job: Job) => void): ColumnDef<Job>[] {
         if (!date) return <span className='text-gray-400'>—</span>;
 
         return (
-          <span className='text-gray-600'>
+          <span className='text-gray-600 dark:text-[#ffffff]/50'>
             {format(new Date(date), 'MMM d, yyyy')}
           </span>
         );
@@ -161,6 +136,35 @@ export function getColumns(onRowClick: (job: Job) => void): ColumnDef<Job>[] {
        * Default sort: most recent first
        * This is set at the table level, not here
        */
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // STATUS COLUMN
+    // ─────────────────────────────────────────────────────────────
+    {
+      accessorKey: 'is_active',
+      header: 'Status',
+      /**
+       * `cell` receives the cell context with:
+       * - row.original: the full data object
+       * - getValue(): the value for this column
+       */
+      cell: ({ row }) => {
+        const isActive = row.getValue('is_active') as boolean;
+        return (
+          <span
+            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+              isActive
+                ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:border dark:text-green-200'
+                : 'bg-gray-100 text-gray-600 dark:bg-blue-950 dark:text-blue-200 dark:border'
+            }`}
+          >
+            {isActive ? 'Active' : 'Inactive'}
+          </span>
+        );
+      },
+      // Smaller width for status
+      size: 100,
     },
   ];
 }

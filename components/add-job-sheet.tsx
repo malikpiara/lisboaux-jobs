@@ -125,9 +125,9 @@ export function AddJobSheet() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <div className='cursor-pointer block p-4 bg-white rounded-lg shadow-sm border border-gray-200 transition-colors hover:border-blue-300 hover:bg-blue-50'>
+        <div className='cursor-pointer block p-4 bg-card rounded-lg shadow-sm border transition-colors hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-white/16'>
           <h3 className='font-medium'>Add Job</h3>
-          <p className='text-sm text-gray-600 mt-1'>
+          <p className='text-sm text-gray-600 dark:text-[#ffffffc9] mt-1'>
             Post a new job listing to the board
           </p>
         </div>

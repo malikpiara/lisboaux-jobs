@@ -205,7 +205,7 @@ function EditJobForm({ job, onSuccess }: EditJobFormProps) {
                   }`}
                 />
               </button>
-              <span className='text-sm text-gray-600'>
+              <span className='text-sm text-gray-600 dark:text-[#ffffff]/50'>
                 {isActive
                   ? 'Active — visible on the job board'
                   : 'Inactive — hidden from the job board'}
@@ -245,7 +245,7 @@ function EditJobForm({ job, onSuccess }: EditJobFormProps) {
                 unless the site needs them to show the job.
               </p>
             ) : (
-              <p className='text-xs text-gray-500'>
+              <p className='text-xs text-gray-500 dark:text-[#ffffff]/50'>
                 Direct link to the job posting
               </p>
             )}
@@ -331,10 +331,10 @@ function EditJobForm({ job, onSuccess }: EditJobFormProps) {
 
         {/* Info Alert */}
         <section className='flex p-4 mt-6'>
-          <Alert className='w-full border-blue-200 bg-blue-50 text-blue-900'>
+          <Alert className='w-full border-blue-200 dark:border-border bg-blue-50 text-blue-900 dark:text-foreground dark:bg-background'>
             <AlertTriangleIcon className='h-4 w-4' />
             <AlertTitle>Changes are immediate</AlertTitle>
-            <AlertDescription>
+            <AlertDescription className='dark:text-[#ffffff]/50'>
               Updates will be reflected on the job board right away.
               Deactivating a job will hide it from public view.
             </AlertDescription>

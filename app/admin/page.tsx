@@ -143,7 +143,7 @@ export default async function AdminPage() {
           <h1 className='text-2xl font-semibold'>
             👋 Welcome back, {profile.full_name?.split(' ')[0] || 'there'}!
           </h1>
-          <p className='text-gray-600 mt-1'>
+          <p className='text-gray-600 dark:text-[#ffffffc9] mt-1'>
             You have <strong>{profile.points}</strong> points.
           </p>
         </div>
@@ -229,17 +229,19 @@ function AdminCard({
   variant?: 'blue' | 'purple';
 }) {
   const colors = {
-    blue: 'hover:border-blue-300 hover:bg-blue-50',
+    blue: 'hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-white/16', // we should probably refactor this!
     purple: 'hover:border-purple-300 hover:bg-purple-50',
   };
 
   return (
     <Link
       href={href}
-      className={`block p-4 bg-white rounded-lg shadow-sm border border-gray-200 transition-colors ${colors[variant]}`}
+      className={`block p-4 bg-card rounded-lg shadow-sm border transition-colors ${colors[variant]}`}
     >
       <h3 className='font-medium'>{title}</h3>
-      <p className='text-sm text-gray-600 mt-1'>{description}</p>
+      <p className='text-sm text-gray-600 dark:text-[#ffffffc9] mt-1'>
+        {description}
+      </p>
     </Link>
   );
 }
