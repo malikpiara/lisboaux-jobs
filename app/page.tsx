@@ -36,12 +36,12 @@ export default async function Home() {
 
       <div className='flex flex-col items-center justify-center font-sans bg-card'>
         <div className='flex w-full max-w-195 flex-col items-center py-4 px-2 sm:px-16 bg-card sm:items-start'>
-          <header className='w-full bg-[#0237CF] text-white p-1 rounded-t-sm'>
+          <header className='w-full bg-[#0237CF] text-white p-1 rounded-t-sm dark:border-t dark:border-x'>
             <div className='font-semibold ml-1 flex gap-3'>
               <Link href={'/'}>Design Jobs</Link>
             </div>
           </header>
-          <main className='w-full bg-background rounded-b-sm'>
+          <main className='w-full bg-background rounded-b-sm dark:border-x dark:border-b'>
             <JobList jobs={jobs} />
           </main>
         </div>
