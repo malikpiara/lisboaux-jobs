@@ -30,10 +30,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { updateJob, type UpdateJobFormState } from '@/lib/actions/jobs';
+import { updateJob } from '@/lib/actions/jobs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangleIcon, CheckCircle2 } from 'lucide-react';
 import { type Job } from './columns';
+import { showPointsToast } from '@/components/leaderboard-toast';
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -123,12 +124,19 @@ function EditJobForm({ job, onSuccess }: EditJobFormProps) {
   // Close sheet on successful update
   useEffect(() => {
     if (state?.success) {
+      // Only show points toast if job was deactivated
+      if (state.wasDeactivated) {
+        showPointsToast({
+          points: 200,
+          message: 'Removed an Outdated Job! You rock 😎',
+        });
+      }
       const timer = setTimeout(() => {
         onSuccess();
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [state?.success, onSuccess]);
+  }, [state?.success, state?.wasDeactivated, onSuccess]);
 
   const handleUrlChange = (inputUrl: string) => {
     const cleaned = cleanTrackingParams(inputUrl);

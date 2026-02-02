@@ -27,6 +27,7 @@ import {
 import { addJob, type AddJobFormState } from '@/lib/actions/jobs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangleIcon } from 'lucide-react';
+import { showPointsToast } from './leaderboard-toast';
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -67,6 +68,7 @@ export function AddJobSheet() {
   // Close sheet and reset form on successful submission
   useEffect(() => {
     if (state?.success) {
+      showPointsToast({ points: 100, message: 'Added a New Job! Hurray 🙌' });
       // Small delay so user sees the success state briefly
       const timer = setTimeout(() => {
         setOpen(false);

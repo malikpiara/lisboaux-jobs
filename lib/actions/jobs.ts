@@ -34,6 +34,7 @@ export type AddJobFormState = {
 export type UpdateJobFormState = {
   success: boolean;
   error?: string;
+  wasDeactivated?: boolean;
 } | null;
 
 // ─────────────────────────────────────────────────────────────────
@@ -324,5 +325,5 @@ export async function updateJob(
   revalidatePath('/admin');
   revalidatePath('/admin/jobs');
 
-  return { success: true };
+  return { success: true, wasDeactivated };
 }
