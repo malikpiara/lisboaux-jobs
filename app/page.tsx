@@ -36,9 +36,9 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jobSchema) }}
       />
 
-      <div className='flex flex-col items-center justify-center font-sans bg-card'>
-        <div className='flex w-full max-w-195 flex-col items-center py-4 px-2 sm:px-16 bg-card sm:items-start'>
-          <header className='w-full bg-[#0237CF] text-white p-1 rounded-t-sm dark:border-t dark:border-x'>
+      <div className='flex flex-col items-center justify-center font-sans bg-background'>
+        <div className='flex w-full max-w-195 flex-col items-center py-4 px-2 sm:px-16 bg-background sm:items-start'>
+          <header className='w-full bg-[#0237CF] text-white p-2 rounded-lg dark:border-t dark:border-x'>
             <div className='font-semibold ml-1 flex gap-3'>
               <Link href={'/'}>Design Jobs</Link>
             </div>
