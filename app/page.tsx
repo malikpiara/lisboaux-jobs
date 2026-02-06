@@ -5,6 +5,7 @@ import { JobList } from '@/components/JobList';
 import { generateJobPostingSchema } from '@/lib/seo/jobPostingSchema';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
+import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,9 @@ export default async function Home() {
             </div>
           </header>
           <main className='w-full bg-background rounded-b-sm '>
-            <JobList jobs={jobs} />
+            <Suspense fallback={<div>Loading...</div>}>
+              <JobList jobs={jobs} />
+            </Suspense>
           </main>
         </div>
         <footer className='gap-6 flex  items-start max-w-195 w-full p-2 flex-col-reverse sm:flex-row sm:px-16 text-base  sm:text-sm text-[#3d2800] dark:text-[#ffffff]/50'>

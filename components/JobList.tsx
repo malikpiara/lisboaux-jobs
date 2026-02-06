@@ -1,5 +1,5 @@
 'use client';
-
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePostHog } from 'posthog-js/react';
@@ -13,36 +13,54 @@ interface JobListProps {
 }
 
 export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
-  const [isTransitioning, setIsTransitioning] = useState(false);
-
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const posthog = usePostHog();
 
-  // Step 1: Filter to only active jobs (this is your "dataset")
-  const activeJobs = jobs.filter((job) => job.is_active);
-
-  // Step 2: Track which page we're on (1-indexed for human readability)
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Step 3: Track if this is the initial mount (to skip scrolling on first render)
+  // pendingPage is only set during the animation transition
+  const [pendingPage, setPendingPage] = useState<number | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const isInitialMount = useRef(true);
 
-  // Step 4: Calculate derived values
+  // The page we render from: pendingPage during animation, URL otherwise
+  const urlPage = Number(searchParams.get('page')) || 1;
+  const displayPage = pendingPage ?? urlPage;
+
+  // Clear pendingPage once URL catches up
+  useEffect(() => {
+    if (pendingPage !== null && urlPage === pendingPage) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPendingPage(null);
+    }
+  }, [urlPage, pendingPage]);
+
+  // Disable browser scroll restoration — we handle it ourselves
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  // Filter to only active jobs
+  const activeJobs = jobs.filter((job) => job.is_active);
+
+  // Calculate derived values
   const totalJobs = activeJobs.length;
   const totalPages = Math.ceil(totalJobs / jobsPerPage);
 
-  // Step 5: Calculate the "window" into our array
-  const startIndex = (currentPage - 1) * jobsPerPage;
+  // Calculate the "window" into our array using displayPage
+  const startIndex = (displayPage - 1) * jobsPerPage;
   const endIndex = startIndex + jobsPerPage;
   const visibleJobs = activeJobs.slice(startIndex, endIndex);
 
-  // Scroll to top when currentPage changes (but not on initial mount)
+  // Scroll to top when displayPage changes (skip initial mount)
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPage]);
+  }, [displayPage]);
 
   const handleJobClick = (job: Job) => {
     posthog?.capture('job_clicked', {
@@ -53,22 +71,28 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
     });
   };
 
-  // Navigation handlers
+  // Navigation handler: snappy animation + URL sync
   const goToPage = (page: number) => {
     const validPage = Math.max(1, Math.min(page, totalPages));
     setIsTransitioning(true);
 
-    // Brief delay to show fade out
     setTimeout(() => {
-      // Clamp to valid range
-      setCurrentPage(validPage);
-
+      // Instant content swap and fade back in
+      setPendingPage(validPage);
       setIsTransitioning(false);
+
+      // Sync URL in the background for back button and bookmarks
+      const params = new URLSearchParams(searchParams.toString());
+      if (validPage === 1) {
+        params.delete('page');
+      } else {
+        params.set('page', String(validPage));
+      }
+      router.push(`?${params.toString()}`, { scroll: false });
     }, 150);
 
-    // Track pagination usage
     posthog?.capture('pagination_clicked', {
-      from_page: currentPage,
+      from_page: displayPage,
       to_page: validPage,
       total_pages: totalPages,
     });
@@ -79,18 +103,14 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
       {/* Job listings */}
       <ul
         className={`
-    text-[#3d2800]
-    transition-opacity duration-150 ease
-    ${isTransitioning ? 'opacity-0' : 'opacity-100'}
-  `}
-        style={{
-          filter: isTransitioning ? 'blur(4px)' : 'blur(0px)',
-          transition: 'opacity 150ms ease, filter 150ms ease',
-        }}
+          text-[#3d2800]
+          transition-[opacity,filter] duration-150 ease
+          ${isTransitioning ? 'opacity-50 blur-xs' : 'opacity-100 blur-none'}
+        `}
       >
         {visibleJobs.map((job) => (
           <li
-            className='list-none hover:bg-muted dark:hover:bg-white/12 transition-all cursor-pointer p-[0.1rem]  hover:border-border border-dashed border-b border-border py-3 px-3'
+            className='list-none hover:bg-muted dark:hover:bg-white/12 transition-all cursor-pointer p-[0.1rem] hover:border-border border-dashed border-b border-border py-3 px-3'
             key={job.id}
           >
             <Link
@@ -123,26 +143,24 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
           aria-label='Job listings pagination'
           className='flex items-center justify-between px-2 py-4 border-border'
         >
-          {/* Page indicator */}
           <p className='text-sm text-gray-700 dark:text-[#ffffff]/50'>
-            Page {currentPage} of {totalPages}
+            Page {displayPage} of {totalPages}
           </p>
 
-          {/* Navigation buttons */}
           <div className='flex items-center space-x-2'>
             <Button
               variant='outline'
               size='sm'
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
+              onClick={() => goToPage(displayPage - 1)}
+              disabled={displayPage === 1}
             >
               Previous
             </Button>
             <Button
               variant='outline'
               size='sm'
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => goToPage(displayPage + 1)}
+              disabled={displayPage === totalPages}
             >
               Next
             </Button>
