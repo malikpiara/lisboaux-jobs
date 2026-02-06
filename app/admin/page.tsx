@@ -236,7 +236,7 @@ function AdminCard({
   return (
     <Link
       href={href}
-      className={`block p-4 bg-card rounded-lg shadow-sm border transition-colors ${colors[variant]}`}
+      className={`block p-4 bg-card rounded-lg shadow-sm border transition-[background-color,transform] ${colors[variant]} active:scale-[0.97]`}
     >
       <h3 className='font-medium'>{title}</h3>
       <p className='text-sm text-gray-600 dark:text-[#ffffffc9] mt-1'>

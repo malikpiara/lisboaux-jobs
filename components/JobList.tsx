@@ -13,6 +13,8 @@ interface JobListProps {
 }
 
 export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   const posthog = usePostHog();
 
   // Step 1: Filter to only active jobs (this is your "dataset")
@@ -53,9 +55,16 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
 
   // Navigation handlers
   const goToPage = (page: number) => {
-    // Clamp to valid range
     const validPage = Math.max(1, Math.min(page, totalPages));
-    setCurrentPage(validPage);
+    setIsTransitioning(true);
+
+    // Brief delay to show fade out
+    setTimeout(() => {
+      // Clamp to valid range
+      setCurrentPage(validPage);
+
+      setIsTransitioning(false);
+    }, 150);
 
     // Track pagination usage
     posthog?.capture('pagination_clicked', {
@@ -68,10 +77,20 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
   return (
     <div>
       {/* Job listings */}
-      <ul className='p-2 text-[#3d2800]'>
+      <ul
+        className={`
+    text-[#3d2800]
+    transition-opacity duration-150 ease
+    ${isTransitioning ? 'opacity-0' : 'opacity-100'}
+  `}
+        style={{
+          filter: isTransitioning ? 'blur(4px)' : 'blur(0px)',
+          transition: 'opacity 150ms ease, filter 150ms ease',
+        }}
+      >
         {visibleJobs.map((job) => (
           <li
-            className='list-none hover:bg-muted dark:hover:bg-white/16 rounded-sm transition-all cursor-pointer p-[0.1rem]  hover:border-border hover:border-dashed border-b border-border py-3'
+            className='list-none hover:bg-muted dark:hover:bg-white/12 transition-all cursor-pointer p-[0.1rem]  hover:border-border border-dashed border-b border-border py-3 px-3'
             key={job.id}
           >
             <Link
