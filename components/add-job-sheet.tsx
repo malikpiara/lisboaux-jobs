@@ -13,7 +13,7 @@
  * - We need to coordinate between Sheet state and form submission
  */
 
-import { useState, useActionState, useEffect } from 'react';
+import { useState, useActionState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -24,36 +24,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { addJob, type AddJobFormState } from '@/lib/actions/jobs';
+import { addJob } from '@/lib/actions/jobs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangleIcon } from 'lucide-react';
 import { showPointsToast } from './leaderboard-toast';
-
-// ─────────────────────────────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────────────────────────────
-
-const PRESET_LOCATIONS = ['Lisbon', 'Porto', 'Remote'];
-
-const TRACKING_PARAM_PATTERNS = [
-  /^utm_/,
-  /^ref$/,
-  /^fbclid$/,
-  /^gclid$/,
-  /^gad_source$/,
-  /^msclkid$/,
-  /^twclid$/,
-  /^li_fat_id$/,
-  /^mc_eid$/,
-  /^oly_enc_id$/,
-  /^_hsenc$/,
-  /^_hsmi$/,
-  /^vero_id$/,
-  /^mkt_tok$/,
-];
-
-const isTrackingParam = (key: string) =>
-  TRACKING_PARAM_PATTERNS.some((pattern) => pattern.test(key));
+import { PRESET_LOCATIONS } from '@/lib/constants';
+import {
+  cleanTrackingParams,
+  hasQueryParams,
+  removeAllQueryParams,
+} from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────
 // COMPONENT
@@ -64,6 +44,7 @@ export function AddJobSheet() {
   const [location, setLocation] = useState('');
   const [url, setUrl] = useState('');
   const [state, formAction, isPending] = useActionState(addJob, null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Close sheet and reset form on successful submission
   useEffect(() => {
@@ -73,56 +54,19 @@ export function AddJobSheet() {
       const timer = setTimeout(() => {
         setOpen(false);
         // Reset form fields
+        formRef.current?.reset();
         setLocation('');
         setUrl('');
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [state?.success]);
-
-  // Clean tracking params from URL
-  const cleanTrackingParams = (inputUrl: string): string => {
-    try {
-      const parsed = new URL(inputUrl);
-      const paramsToDelete: string[] = [];
-
-      parsed.searchParams.forEach((_, key) => {
-        if (isTrackingParam(key)) {
-          paramsToDelete.push(key);
-        }
-      });
-
-      paramsToDelete.forEach((key) => parsed.searchParams.delete(key));
-
-      return parsed.toString();
-    } catch {
-      return inputUrl;
-    }
-  };
+  }, [state]);
 
   const handleUrlChange = (inputUrl: string) => {
-    const cleaned = cleanTrackingParams(inputUrl);
-    setUrl(cleaned);
+    setUrl(cleanTrackingParams(inputUrl));
   };
 
-  const hasRemainingParams = (() => {
-    try {
-      const parsed = new URL(url);
-      return parsed.searchParams.size > 0;
-    } catch {
-      return false;
-    }
-  })();
-
-  const removeAllParams = () => {
-    try {
-      const parsed = new URL(url);
-      parsed.search = '';
-      setUrl(parsed.toString());
-    } catch {
-      // Invalid URL, do nothing
-    }
-  };
+  const hasRemainingParams = hasQueryParams(url);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -134,7 +78,7 @@ export function AddJobSheet() {
           </p>
         </div>
       </SheetTrigger>
-      <SheetContent className='sm:max-w-lg overflow-y-auto p-0'>
+      <SheetContent className='sm:max-w-lg flex flex-col p-0'>
         <SheetHeader className='border-b'>
           <SheetTitle>Add a New Job</SheetTitle>
           <SheetDescription>
@@ -142,147 +86,141 @@ export function AddJobSheet() {
           </SheetDescription>
         </SheetHeader>
 
-        <div className='py-2'>
-          {/* Success Message: TODO replace with something else */}
-          {/* {state?.success && (
-            <div className='mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md'>
-              <p className='font-medium'>Job added successfully!</p>
-              <p className='text-sm mt-1'>You earned 100 points.</p>
-            </div>
-          )} */}
-
-          {/* Error Message */}
-          {state?.error && (
-            <div className='mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md'>
-              <p className='font-medium'>Error adding job</p>
-              <p className='text-sm mt-1'>{state.error}</p>
-            </div>
-          )}
-
-          {/* Form */}
-          <form
-            action={formAction}
-            id='add-job-form'
-            className='space-y-5 px-4 '
-          >
-            {/* URL */}
-            <div className='space-y-2'>
-              <label
-                htmlFor='sheet-url'
-                className='block text-xs font-medium text-foreground'
-              >
-                Job URL
-              </label>
-              <input
-                type='url'
-                id='sheet-url'
-                name='url'
-                required
-                disabled={isPending}
-                value={url}
-                onChange={(e) => handleUrlChange(e.target.value)}
-                placeholder='https://company.com/careers/job-id'
-                className='w-full h-10 px-3 py-2 bg-muted/50 border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground'
-              />
-              {hasRemainingParams ? (
-                <p className='text-xs text-[#e4683a]'>
-                  This URL has query parameters.{' '}
-                  <button
-                    type='button'
-                    onClick={removeAllParams}
-                    className='underline hover:text-amber-700'
-                  >
-                    Remove them
-                  </button>{' '}
-                  unless the site needs them to show the job.
-                </p>
-              ) : (
-                <p className='text-xs text-gray-500'>
-                  Direct link to the job posting
-                </p>
-              )}
-            </div>
-
-            {/* Title */}
-            <div className='space-y-2'>
-              <label
-                htmlFor='sheet-title'
-                className='block text-xs font-medium text-foreground'
-              >
-                Job Title
-              </label>
-              <input
-                type='text'
-                id='sheet-title'
-                name='title'
-                required
-                disabled={isPending}
-                placeholder='Senior Product Designer'
-                className='w-full h-10 px-3 py-2 bg-muted/50 border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground'
-              />
-            </div>
-
-            {/* Company */}
-            <div className='space-y-2'>
-              <label
-                htmlFor='sheet-company'
-                className='block text-xs font-medium text-foreground'
-              >
-                Company
-              </label>
-              <input
-                type='text'
-                id='sheet-company'
-                name='company'
-                required
-                disabled={isPending}
-                placeholder='Upframe'
-                className='w-full h-10 px-3 py-2 bg-muted/50 border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground'
-              />
-            </div>
-
-            {/* Location */}
-            <div className='space-y-2'>
-              <label
-                htmlFor='sheet-location'
-                className='block text-xs font-medium text-foreground'
-              >
-                Location
-              </label>
-              <input
-                type='text'
-                id='sheet-location'
-                name='location'
-                required
-                disabled={isPending}
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder='Lisbon'
-                className='w-full h-10 px-3 py-2 bg-muted/50 border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground'
-              />
-              <div className='flex gap-2 mt-2'>
-                {PRESET_LOCATIONS.map((preset) => (
-                  <Button
-                    key={preset}
-                    type='button'
-                    variant='outline'
-                    size='sm'
-                    disabled={isPending}
-                    onClick={() => setLocation(preset)}
-                  >
-                    {preset}
-                  </Button>
-                ))}
+        <div className='flex flex-col flex-1 min-h-0'>
+          <div className='py-2 flex-1 overflow-y-auto'>
+            {/* Error Message */}
+            {state?.error && (
+              <div className='mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md'>
+                <p className='font-medium'>Error adding job</p>
+                <p className='text-sm mt-1'>{state.error}</p>
               </div>
-              {/* Warning Message */}
-            </div>
-          </form>
-          <section className='flex p-4 mt-6'>
-            <AlertColors />
-          </section>
+            )}
+
+            <form
+              ref={formRef}
+              action={formAction}
+              id='add-job-form'
+              className='space-y-5 px-4'
+            >
+              {/* URL */}
+              <div className='space-y-2'>
+                <label
+                  htmlFor='sheet-url'
+                  className='block text-xs font-medium text-foreground'
+                >
+                  Job URL
+                </label>
+                <input
+                  type='url'
+                  id='sheet-url'
+                  name='url'
+                  required
+                  disabled={isPending}
+                  value={url}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  placeholder='https://company.com/careers/job-id'
+                  className='w-full h-10 px-3 py-2 bg-muted/50 border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground'
+                />
+                {hasRemainingParams ? (
+                  <p className='text-xs text-[#e4683a]'>
+                    This URL has query parameters.{' '}
+                    <button
+                      type='button'
+                      onClick={() => setUrl(removeAllQueryParams(url))}
+                      className='underline hover:text-amber-700'
+                    >
+                      Remove them
+                    </button>{' '}
+                    unless the site needs them to show the job.
+                  </p>
+                ) : (
+                  <p className='text-xs text-gray-500'>
+                    Direct link to the job posting
+                  </p>
+                )}
+              </div>
+
+              {/* Title */}
+              <div className='space-y-2'>
+                <label
+                  htmlFor='sheet-title'
+                  className='block text-xs font-medium text-foreground'
+                >
+                  Job Title
+                </label>
+                <input
+                  type='text'
+                  id='sheet-title'
+                  name='title'
+                  required
+                  disabled={isPending}
+                  placeholder='Senior Product Designer'
+                  className='w-full h-10 px-3 py-2 bg-muted/50 border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground'
+                />
+              </div>
+
+              {/* Company */}
+              <div className='space-y-2'>
+                <label
+                  htmlFor='sheet-company'
+                  className='block text-xs font-medium text-foreground'
+                >
+                  Company
+                </label>
+                <input
+                  type='text'
+                  id='sheet-company'
+                  name='company'
+                  required
+                  disabled={isPending}
+                  placeholder='Upframe'
+                  className='w-full h-10 px-3 py-2 bg-muted/50 border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground'
+                />
+              </div>
+
+              {/* Location */}
+              <div className='space-y-2'>
+                <label
+                  htmlFor='sheet-location'
+                  className='block text-xs font-medium text-foreground'
+                >
+                  Location
+                </label>
+                <input
+                  type='text'
+                  id='sheet-location'
+                  name='location'
+                  required
+                  disabled={isPending}
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder='Lisbon'
+                  className='w-full h-10 px-3 py-2 bg-muted/50 border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground'
+                />
+                <div className='flex gap-2 mt-2'>
+                  {PRESET_LOCATIONS.map((preset) => (
+                    <Button
+                      key={preset}
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      disabled={isPending}
+                      onClick={() => setLocation(preset)}
+                    >
+                      {preset}
+                    </Button>
+                  ))}
+                </div>
+                {/* Warning Message */}
+              </div>
+            </form>
+            <section className='flex p-4 mt-6'>
+              <AlertColors />
+            </section>
+          </div>
         </div>
         {/* Footer - outside the scrollable area */}
-        <SheetFooter className='border-t flex flex-row justify-end gap-3 pt-4'>
+        <SheetFooter className='border-t flex flex-row justify-end gap-3 px-4 py-4'>
           <Button
             type='button'
             variant='outline'

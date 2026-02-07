@@ -35,32 +35,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangleIcon, CheckCircle2 } from 'lucide-react';
 import { type Job } from './columns';
 import { showPointsToast } from '@/components/leaderboard-toast';
-
-// ─────────────────────────────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────────────────────────────
-
-const PRESET_LOCATIONS = ['Lisbon', 'Porto', 'Remote'];
-
-const TRACKING_PARAM_PATTERNS = [
-  /^utm_/,
-  /^ref$/,
-  /^fbclid$/,
-  /^gclid$/,
-  /^gad_source$/,
-  /^msclkid$/,
-  /^twclid$/,
-  /^li_fat_id$/,
-  /^mc_eid$/,
-  /^oly_enc_id$/,
-  /^_hsenc$/,
-  /^_hsmi$/,
-  /^vero_id$/,
-  /^mkt_tok$/,
-];
-
-const isTrackingParam = (key: string) =>
-  TRACKING_PARAM_PATTERNS.some((pattern) => pattern.test(key));
+import { PRESET_LOCATIONS } from '@/lib/constants';
+import {
+  cleanTrackingParams,
+  hasQueryParams,
+  removeAllQueryParams,
+} from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────
 // TYPES
@@ -75,29 +55,6 @@ interface EditJobSheetProps {
 interface EditJobFormProps {
   job: Job;
   onSuccess: () => void;
-}
-
-// ─────────────────────────────────────────────────────────────────
-// HELPER: URL CLEANING
-// ─────────────────────────────────────────────────────────────────
-
-function cleanTrackingParams(inputUrl: string): string {
-  try {
-    const parsed = new URL(inputUrl);
-    const paramsToDelete: string[] = [];
-
-    parsed.searchParams.forEach((_, key) => {
-      if (isTrackingParam(key)) {
-        paramsToDelete.push(key);
-      }
-    });
-
-    paramsToDelete.forEach((key) => parsed.searchParams.delete(key));
-
-    return parsed.toString();
-  } catch {
-    return inputUrl;
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -136,35 +93,18 @@ function EditJobForm({ job, onSuccess }: EditJobFormProps) {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [state?.success, state?.wasDeactivated, onSuccess]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   const handleUrlChange = (inputUrl: string) => {
-    const cleaned = cleanTrackingParams(inputUrl);
-    setUrl(cleaned);
+    setUrl(cleanTrackingParams(inputUrl));
   };
 
-  const hasRemainingParams = (() => {
-    try {
-      const parsed = new URL(url);
-      return parsed.searchParams.size > 0;
-    } catch {
-      return false;
-    }
-  })();
-
-  const removeAllParams = () => {
-    try {
-      const parsed = new URL(url);
-      parsed.search = '';
-      setUrl(parsed.toString());
-    } catch {
-      // Invalid URL, do nothing
-    }
-  };
+  const hasRemainingParams = hasQueryParams(url);
 
   return (
-    <>
-      <div className='py-2'>
+    <div className='flex flex-col flex-1 min-h-0'>
+      <div className='py-2 flex-1 overflow-y-auto'>
         {/* Success Message */}
         {state?.success && (
           <div className='mx-4 mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-start gap-3'>
@@ -245,7 +185,7 @@ function EditJobForm({ job, onSuccess }: EditJobFormProps) {
                 This URL has query parameters.{' '}
                 <button
                   type='button'
-                  onClick={removeAllParams}
+                  onClick={() => setUrl(removeAllQueryParams(url))}
                   className='underline hover:text-amber-700'
                 >
                   Remove them
@@ -351,12 +291,12 @@ function EditJobForm({ job, onSuccess }: EditJobFormProps) {
       </div>
 
       {/* Footer */}
-      <SheetFooter className='border-t flex flex-row justify-end gap-3 pt-4'>
+      <SheetFooter className='border-t flex flex-row justify-end gap-3 px-4 py-4'>
         <Button type='submit' form='edit-job-form' disabled={isPending}>
           {isPending ? 'Saving...' : 'Save Changes'}
         </Button>
       </SheetFooter>
-    </>
+    </div>
   );
 }
 
@@ -384,7 +324,7 @@ export function EditJobSheet({ job, open, onOpenChange }: EditJobSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className='sm:max-w-lg overflow-y-auto p-0'>
+      <SheetContent className='sm:max-w-lg flex flex-col p-0'>
         <SheetHeader className='border-b'>
           <SheetTitle>Edit Job</SheetTitle>
           <SheetDescription>
