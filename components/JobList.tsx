@@ -7,12 +7,42 @@ import { Job } from '@/lib/types';
 import { buildJobUrl, formatRelativeDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
+// ─── SOURCE PAGE TYPE ──────────────────────────────────────────
+// This prop tells PostHog which type of page the user is on.
+// It's passed by the parent page component, so JobList stays
+// generic and reusable — it doesn't need to know about URLs.
+//
+// Why a prop instead of parsing window.location?
+// 1. JobList is a presentational component — it shouldn't know
+//    about your URL structure
+// 2. Props are explicit and type-safe — you can't misspell a value
+// 3. It works in tests without mocking window.location
+type SourcePageType = 'homepage' | 'location' | 'company';
+
 interface JobListProps {
   jobs: Job[];
   jobsPerPage?: number;
+  sourcePageType?: SourcePageType;
 }
 
-export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
+// ─── SLUG HELPER ────────────────────────────────────────────────
+// Converts "Lisbon" → "lisbon", "São Paulo" → "são-paulo"
+// encodeURIComponent then handles special characters for the URL:
+//   "são-paulo" → "s%C3%A3o-paulo"
+// On the other end, your [city]/page.tsx decodes it back.
+//
+// Why not just toLowerCase()? Because spaces in URLs are ugly
+// and can cause issues. Replacing them with hyphens is the
+// standard convention (called "slugifying").
+function toSlug(value: string): string {
+  return encodeURIComponent(value.trim().toLowerCase().replace(/\s+/g, '-'));
+}
+
+export function JobList({
+  jobs,
+  jobsPerPage = 25,
+  sourcePageType = 'homepage',
+}: JobListProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const posthog = usePostHog();
@@ -68,6 +98,7 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
       job_title: job.title,
       company: job.company,
       url: job.url,
+      source_page_type: sourcePageType,
     });
   };
 
@@ -123,10 +154,24 @@ export function JobList({ jobs, jobsPerPage = 25 }: JobListProps) {
               </div>
             </Link>
             <div className='flex text-sm gap-1 text-muted-foreground dark:text-[#ffffffc9]'>
-              <div className='font-medium'>{job.company}</div>
+              {/* ─── CLICKABLE COMPANY ──────────────────────── */}
+              {/* Links to /company/[slug] for filtered view     */}
+              <Link
+                href={`/company/${toSlug(job.company)}`}
+                className='font-medium hover:text-foreground hover:underline transition-colors'
+              >
+                {job.company}
+              </Link>
               <div>
                 <span>| </span>
-                {job.location}
+                {/* ─── CLICKABLE LOCATION ─────────────────────── */}
+                {/* Links to /location/[slug] for filtered view    */}
+                <Link
+                  href={`/location/${toSlug(job.location)}`}
+                  className='hover:text-foreground hover:underline transition-colors'
+                >
+                  {job.location}
+                </Link>
               </div>
               <div>
                 <span>| </span>
