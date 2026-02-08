@@ -1,27 +1,21 @@
-// app/location/[city]/page.tsx
-
-import Link from 'next/link';
+import { TransitionLink as Link } from '@/components/TransitionLink';
 import { Job } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
 import { JobList } from '@/components/JobList';
-import { Suspense } from 'react';
+import { CityFilterInline } from '@/components/CityFilterInline';
+import { Suspense, cache } from 'react';
+import { Metadata } from 'next';
+import { PageTransition } from '@/components/PageTransition';
 
-// ─── WHY force-dynamic? ───────────────────────────────────────────
-// This tells Next.js: "Don't try to cache this page at build time."
-// Since your job data changes frequently (new jobs added, old ones deactivated),
-// you want fresh data on every request. Without this, Next.js might serve
-// a stale, pre-rendered version.
 export const dynamic = 'force-dynamic';
 
-// ─── THE DATA FETCHING FUNCTION ───────────────────────────────────
-// This runs on the SERVER only (never shipped to the browser).
-// It's just an async function — no hooks, no client state.
-async function getJobsByCity(city: string): Promise<Job[]> {
+// ─── DATA FETCHING ────────────────────────────────────────────────
+// cache() deduplicates within a single request — generateMetadata
+// and the page component share the same result without hitting
+// the database twice.
+const getJobsByCity = cache(async (city: string): Promise<Job[]> => {
   const supabase = await createClient();
 
-  // ILIKE = case-insensitive LIKE (PostgreSQL-specific)
-  // The % wildcards mean "match anywhere in the string"
-  // So "lisbon" matches "Lisbon", "Lisbon, Portugal", "Greater Lisbon Area"
   const { data, error } = await supabase
     .from('jobs')
     .select('*')
@@ -34,73 +28,145 @@ async function getJobsByCity(city: string): Promise<Job[]> {
   }
 
   return data ?? [];
-}
+});
 
-// ─── PARAMS TYPE ──────────────────────────────────────────────────
-// In Next.js 15+, params is a Promise that must be awaited.
-// The key "city" matches your folder name: [city]
-// If your folder was [location], this would be params.location
+// ─── FETCH DISTINCT CITIES WITH COUNTS ────────────────────────────
+// Queries all active jobs and groups by location to build the
+// picker options. Returns sorted by count (most jobs first).
+// Also wrapped in cache() since generateMetadata could call it too
+// if we ever want city counts in the meta description.
+const getCitiesWithCounts = cache(
+  async (): Promise<{ name: string; count: number }[]> => {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('location')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching city counts:', error);
+      return [];
+    }
+
+    // Group by location and count occurrences
+    const counts: Record<string, number> = {};
+    for (const job of data ?? []) {
+      const loc = job.location ?? 'Unknown';
+      counts[loc] = (counts[loc] || 0) + 1;
+    }
+
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  },
+);
+
+// ─── SEO: DYNAMIC METADATA ───────────────────────────────────────
 type PageProps = {
   params: Promise<{ city: string }>;
 };
 
-// ─── THE PAGE COMPONENT ───────────────────────────────────────────
-// This is a Server Component by default (no 'use client' directive).
-// It can be async, which means it can fetch data directly.
-export default async function LocationPage({ params }: PageProps) {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { city } = await params;
-
-  // decodeURIComponent handles URL encoding:
-  // "/location/s%C3%A3o%20paulo" → "são paulo"
-  // replace(/-/g, ' ') converts hyphens back to spaces:
-  // "sao-paulo" → "sao paulo" so ILIKE matches "São Paulo"
   const decodedCity = decodeURIComponent(city).replace(/-/g, ' ');
-
   const jobs = await getJobsByCity(decodedCity);
 
-  // Format for display: "lisbon" → "Lisbon"
   const displayCity =
     decodedCity.charAt(0).toUpperCase() + decodedCity.slice(1);
 
+  const activeCount = jobs.filter((j) => j.is_active).length;
+  const slug = city.toLowerCase();
+
+  return {
+    title: `Design Jobs in ${displayCity} | LisboaUX`,
+    description: `Browse ${activeCount} active design ${activeCount === 1 ? 'job' : 'jobs'} in ${displayCity}, Portugal. Find UX, UI, and product design roles on LisboaUX.`,
+    alternates: {
+      canonical: `https://jobs.lisboaux.com/location/${slug}`,
+    },
+  };
+}
+
+// ─── PAGE COMPONENT ───────────────────────────────────────────────
+export default async function LocationPage({ params }: PageProps) {
+  const { city } = await params;
+  const decodedCity = decodeURIComponent(city).replace(/-/g, ' ');
+
+  // Fetch jobs and city options in parallel
+  const [jobs, cities] = await Promise.all([
+    getJobsByCity(decodedCity),
+    getCitiesWithCounts(),
+  ]);
+
+  const displayCity =
+    decodedCity.charAt(0).toUpperCase() + decodedCity.slice(1);
+
+  const activeCount = jobs.filter((j) => j.is_active).length;
+
+  // ─── JSON-LD STRUCTURED DATA ────────────────────────────────────
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `Design Jobs in ${displayCity}`,
+    numberOfItems: activeCount,
+    itemListElement: jobs
+      .filter((j) => j.is_active)
+      .map((job, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'JobPosting',
+          title: job.title,
+          hiringOrganization: {
+            '@type': 'Organization',
+            name: job.company,
+          },
+          jobLocation: {
+            '@type': 'Place',
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: job.location,
+              addressCountry: 'PT',
+            },
+          },
+          datePosted: job.submitted_on,
+        },
+      })),
+  };
+
   return (
     <div className='flex flex-col items-center justify-center font-sans bg-background'>
-      <div className='flex w-full max-w-195 flex-col items-center py-4 px-2 sm:px-16 bg-background sm:items-start'>
-        {/* ─── HEADER ──────────────────────────────────────── */}
-        {/* Same header as your homepage for visual consistency */}
+      <script
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
+      <div className='flex w-full max-w-195 flex-col items-center py-4 px-3 sm:px-16 bg-background sm:items-start'>
         <header className='w-full bg-[#0237CF] text-white p-2 rounded-lg'>
           <div className='font-semibold ml-1 flex gap-3'>
             <Link href='/'>Design Jobs</Link>
           </div>
         </header>
 
-        {/* ─── CONTEXT BAR ─────────────────────────────────── */}
-        {/* This is important UX: tell the user WHERE they are */}
-        {/* and give them a clear way back to all jobs.        */}
-        <div className='w-full flex items-center justify-between py-4 px-1'>
-          <div>
+        <PageTransition>
+          <div className='w-full flex items-center justify-between py-4 px-2'>
             <h1 className='text-lg font-semibold text-foreground'>
-              Design Jobs in {displayCity}
+              Design Jobs in{' '}
+              <CityFilterInline currentCity={displayCity} cities={cities} />
             </h1>
             <p className='text-sm text-muted-foreground'>
-              {jobs.filter((j) => j.is_active).length} active{' '}
-              {jobs.filter((j) => j.is_active).length === 1 ? 'job' : 'jobs'}
+              {activeCount} active {activeCount === 1 ? 'job' : 'jobs'}
             </p>
           </div>
-          <Link
-            href='/'
-            className='text-sm text-muted-foreground hover:text-foreground transition-colors'
-          >
-            ← All Jobs
-          </Link>
-        </div>
 
-        {/* ─── JOB LIST ────────────────────────────────────── */}
-        {/* This is the key reuse: same component, different data */}
-        <main className='w-full bg-background rounded-b-sm'>
-          <Suspense fallback={<div>Loading...</div>}>
-            <JobList jobs={jobs} sourcePageType='location' />
-          </Suspense>
-        </main>
+          <main className='w-full bg-background rounded-b-sm'>
+            <Suspense fallback={<div>Loading...</div>}>
+              <JobList jobs={jobs} sourcePageType='location' />
+            </Suspense>
+          </main>
+        </PageTransition>
       </div>
     </div>
   );

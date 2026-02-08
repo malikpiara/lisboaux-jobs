@@ -4,6 +4,7 @@ import './globals.css';
 import { PostHogProvider } from './providers/PostHogProvider';
 import { Motto } from '@/components/motto';
 import { Toaster } from '@/components/ui/sonner';
+import { NavigationProvider } from '@/components/NavigationTransition';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -35,7 +36,7 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          {children}
+          <NavigationProvider>{children}</NavigationProvider>
           <Motto />
           <Toaster />
         </body>

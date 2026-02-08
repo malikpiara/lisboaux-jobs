@@ -3,20 +3,12 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePostHog } from 'posthog-js/react';
+import { useNavTransition } from '@/components/NavigationTransition';
 import { Job } from '@/lib/types';
 import { buildJobUrl, formatRelativeDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 // ─── SOURCE PAGE TYPE ──────────────────────────────────────────
-// This prop tells PostHog which type of page the user is on.
-// It's passed by the parent page component, so JobList stays
-// generic and reusable — it doesn't need to know about URLs.
-//
-// Why a prop instead of parsing window.location?
-// 1. JobList is a presentational component — it shouldn't know
-//    about your URL structure
-// 2. Props are explicit and type-safe — you can't misspell a value
-// 3. It works in tests without mocking window.location
 type SourcePageType = 'homepage' | 'location' | 'company';
 
 interface JobListProps {
@@ -26,17 +18,12 @@ interface JobListProps {
 }
 
 // ─── SLUG HELPER ────────────────────────────────────────────────
-// Converts "Lisbon" → "lisbon", "São Paulo" → "são-paulo"
-// encodeURIComponent then handles special characters for the URL:
-//   "são-paulo" → "s%C3%A3o-paulo"
-// On the other end, your [city]/page.tsx decodes it back.
-//
-// Why not just toLowerCase()? Because spaces in URLs are ugly
-// and can cause issues. Replacing them with hyphens is the
-// standard convention (called "slugifying").
 function toSlug(value: string): string {
   return encodeURIComponent(value.trim().toLowerCase().replace(/\s+/g, '-'));
 }
+
+// ─── CUSTOM EASING ──────────────────────────────────────────────
+const EASE_OUT = 'cubic-bezier(0.165, 0.84, 0.44, 1)';
 
 export function JobList({
   jobs,
@@ -46,6 +33,22 @@ export function JobList({
   const searchParams = useSearchParams();
   const router = useRouter();
   const posthog = usePostHog();
+
+  // ─── REDUCED MOTION ─────────────────────────────────────────
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReducedMotion(mq.matches);
+
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // ─── ROUTE TRANSITIONS ────────────────────────────────────────
+  const { navigate } = useNavTransition();
 
   // pendingPage is only set during the animation transition
   const [pendingPage, setPendingPage] = useState<number | null>(null);
@@ -108,11 +111,9 @@ export function JobList({
     setIsTransitioning(true);
 
     setTimeout(() => {
-      // Instant content swap and fade back in
       setPendingPage(validPage);
       setIsTransitioning(false);
 
-      // Sync URL in the background for back button and bookmarks
       const params = new URLSearchParams(searchParams.toString());
       if (validPage === 1) {
         params.delete('page');
@@ -129,16 +130,25 @@ export function JobList({
     });
   };
 
+  // ─── TRANSITION STYLES ────────────────────────────────────────
+  // Now only handles PAGINATION transitions (isTransitioning).
+  // Page-level navigation transitions (isNavigating) are handled
+  // by the PageTransition wrapper — this prevents double-blurring
+  // where both JobList AND PageTransition blur simultaneously.
+  const transitionStyle = reducedMotion
+    ? { opacity: isTransitioning ? 0.5 : 1, transition: 'none' }
+    : {
+        opacity: isTransitioning ? 0.5 : 1,
+        filter: isTransitioning ? 'blur(2px)' : 'blur(0px)',
+        transition: isTransitioning
+          ? `opacity 150ms ${EASE_OUT}, filter 150ms ${EASE_OUT}`
+          : `opacity 250ms ${EASE_OUT}, filter 250ms ${EASE_OUT}`,
+      };
+
   return (
     <div>
       {/* Job listings */}
-      <ul
-        className={`
-          text-[#3d2800]
-          transition-[opacity,filter] duration-150 ease
-          ${isTransitioning ? 'opacity-50 blur-xs' : 'opacity-100 blur-none'}
-        `}
-      >
+      <ul style={transitionStyle} className='text-[#3d2800]'>
         {visibleJobs.map((job) => (
           <li
             className='list-none hover:bg-muted dark:hover:bg-white/12 transition-all cursor-pointer p-[0.1rem] hover:border-border border-dashed border-b border-border py-3 px-3'
@@ -154,20 +164,26 @@ export function JobList({
               </div>
             </Link>
             <div className='flex text-sm gap-1 text-muted-foreground dark:text-[#ffffffc9]'>
-              {/* ─── CLICKABLE COMPANY ──────────────────────── */}
-              {/* Links to /company/[slug] for filtered view     */}
               <Link
                 href={`/company/${toSlug(job.company)}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate(`/company/${toSlug(job.company)}`);
+                }}
                 className='font-medium hover:text-foreground hover:underline transition-colors'
               >
                 {job.company}
               </Link>
               <div>
                 <span>| </span>
-                {/* ─── CLICKABLE LOCATION ─────────────────────── */}
-                {/* Links to /location/[slug] for filtered view    */}
                 <Link
                   href={`/location/${toSlug(job.location)}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate(`/location/${toSlug(job.location)}`);
+                  }}
                   className='hover:text-foreground hover:underline transition-colors'
                 >
                   {job.location}
