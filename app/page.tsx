@@ -88,46 +88,12 @@ export default async function Home() {
             />
           </Suspense>
         </div>
-
-        <footer className='gap-6 flex items-start max-w-195 w-full p-2 flex-col-reverse sm:flex-row sm:px-16 text-base sm:text-sm text-[#3d2800] dark:text-[#ffffff]/50'>
-          <section className='flex flex-col sm:flex-row gap-5 mb-3'>
-            <div>
-              <Link
-                className='dark:hover:text-white transition-colors'
-                href={'https://whatsapp.com/channel/0029VbBgMmb6hENv6HkmMt2R'}
-              >
-                Job Alerts on WhatsApp
-              </Link>
-            </div>
-            <div className='hidden sm:block'>|</div>
-            <div>
-              <Link
-                className='dark:hover:text-white transition-colors'
-                href={'https://t.me/ux_jobs'}
-              >
-                Job Alerts on Telegram
-              </Link>
-            </div>
-            <div className='hidden sm:block'>|</div>
-            <div>
-              <Link
-                className='dark:hover:text-white transition-colors'
-                href={'https://lisboaux.com/slack'}
-              >
-                Join our Slack Community
-              </Link>
-            </div>
-          </section>
-          <section>
-            <CardPersonOfTheMonth />
-          </section>
-        </footer>
       </div>
     </>
   );
 }
 
-const CardPersonOfTheMonth = () => (
+export const CardPersonOfTheMonth = () => (
   <div className='w-64 bg-background rounded-xl border border-border shadow-sm overflow-hidden right-10 bottom-10 fixed hidden md:block'>
     <div className='relative'>
       <Image

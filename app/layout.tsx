@@ -4,6 +4,8 @@ import './globals.css';
 import { PostHogProvider } from './providers/PostHogProvider';
 import { Motto } from '@/components/motto';
 import { Toaster } from '@/components/ui/sonner';
+import Link from 'next/link';
+import { CardPersonOfTheMonth } from './page';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -39,6 +41,39 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
           {children}
+          <footer className='gap-6 flex items-start max-w-195 w-full p-2 flex-col-reverse sm:flex-row sm:px-16 text-base sm:text-sm text-[#3d2800] dark:text-[#ffffff]/50 mx-auto'>
+            <section className='flex flex-col sm:flex-row gap-5 mb-3'>
+              <div>
+                <Link
+                  className='dark:hover:text-white transition-colors'
+                  href={'https://whatsapp.com/channel/0029VbBgMmb6hENv6HkmMt2R'}
+                >
+                  Job Alerts on WhatsApp
+                </Link>
+              </div>
+              <div className='hidden sm:block'>|</div>
+              <div>
+                <Link
+                  className='dark:hover:text-white transition-colors'
+                  href={'https://t.me/ux_jobs'}
+                >
+                  Job Alerts on Telegram
+                </Link>
+              </div>
+              <div className='hidden sm:block'>|</div>
+              <div>
+                <Link
+                  className='dark:hover:text-white transition-colors'
+                  href={'https://lisboaux.com/slack'}
+                >
+                  Join our Slack Community
+                </Link>
+              </div>
+            </section>
+            {/* <section>
+              <CardPersonOfTheMonth />
+            </section> */}
+          </footer>
           <Motto />
           <Toaster />
         </body>
