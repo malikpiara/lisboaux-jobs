@@ -169,13 +169,13 @@ export function JobList({
                 {job.title}
               </div>
             </Link>
-            <div className='flex text-sm gap-1 text-muted-foreground dark:text-[#ffffffc9]'>
+            <div className='flex text-sm gap-1 text-muted-foreground dark:text-[#ffffffc9] whitespace-nowrap overflow-hidden items-center'>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onCompanyClick?.(job.company);
                 }}
-                className='font-medium hover:text-foreground hover:underline transition-colors cursor-pointer'
+                className='font-medium hover:text-foreground hover:underline transition-colors cursor-pointer truncate max-w-[150px] sm:max-w-none'
               >
                 {job.company}
               </button>
