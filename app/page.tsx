@@ -1,16 +1,21 @@
+// app/page.tsx
+
 import Link from 'next/link';
 import { Job } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
-import { JobList } from '@/components/JobList';
+import { FilterableJobBoard } from '@/components/FilterableJobBoard';
 import { generateJobPostingSchema } from '@/lib/seo/jobPostingSchema';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
 import { Suspense } from 'react';
-import { PageTransition } from '@/components/PageTransition';
 
 export const dynamic = 'force-dynamic';
 
-async function getJobs(): Promise<Job[]> {
+// ─── SHARED DATA FETCHERS ─────────────────────────────────────
+// These are the same queries used by all three pages.
+// In a future refactor, extract to lib/data.ts.
+
+async function getAllJobs(): Promise<Job[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -26,13 +31,42 @@ async function getJobs(): Promise<Job[]> {
   return data ?? [];
 }
 
+async function getCitiesWithCounts(): Promise<
+  { name: string; count: number }[]
+> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('location')
+    .eq('is_active', true);
+
+  if (error) {
+    console.error('Error fetching city counts:', error);
+    return [];
+  }
+
+  const counts: Record<string, number> = {};
+  for (const job of data ?? []) {
+    const loc = job.location ?? 'Unknown';
+    counts[loc] = (counts[loc] || 0) + 1;
+  }
+
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export default async function Home() {
-  const jobs = await getJobs();
+  const [jobs, cities] = await Promise.all([
+    getAllJobs(),
+    getCitiesWithCounts(),
+  ]);
+
   const jobSchema = generateJobPostingSchema(jobs);
 
   return (
     <>
-      {/* Structured data for search engines (invisible to users) */}
       <script
         type='application/ld+json'
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jobSchema) }}
@@ -45,15 +79,17 @@ export default async function Home() {
               <Link href={'/'}>Design Jobs</Link>
             </div>
           </header>
-          <PageTransition>
-            <main className='w-full bg-background rounded-b-sm '>
-              <Suspense fallback={<div>Loading...</div>}>
-                <JobList jobs={jobs} />
-              </Suspense>
-            </main>
-          </PageTransition>
+
+          <Suspense fallback={<div>Loading...</div>}>
+            <FilterableJobBoard
+              allJobs={jobs}
+              initialFilter={{ type: 'none' }}
+              cities={cities}
+            />
+          </Suspense>
         </div>
-        <footer className='gap-6 flex  items-start max-w-195 w-full p-2 flex-col-reverse sm:flex-row sm:px-16 text-base  sm:text-sm text-[#3d2800] dark:text-[#ffffff]/50'>
+
+        <footer className='gap-6 flex items-start max-w-195 w-full p-2 flex-col-reverse sm:flex-row sm:px-16 text-base sm:text-sm text-[#3d2800] dark:text-[#ffffff]/50'>
           <section className='flex flex-col sm:flex-row gap-5 mb-3'>
             <div>
               <Link
@@ -92,8 +128,7 @@ export default async function Home() {
 }
 
 const CardPersonOfTheMonth = () => (
-  <div className='w-64 bg-background rounded-xl border border-border shadow-sm overflow-hidden right-10 bottom-10 fixed hidden  md:block'>
-    {/* Photo with subtle overlay */}
+  <div className='w-64 bg-background rounded-xl border border-border shadow-sm overflow-hidden right-10 bottom-10 fixed hidden md:block'>
     <div className='relative'>
       <Image
         width={300}
@@ -102,7 +137,6 @@ const CardPersonOfTheMonth = () => (
         alt='Isabel Novais Machado - Person of the Year'
         className='w-full aspect-square object-cover'
       />
-      {/* Year badge */}
       <div className='absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-bold bg-[#FFCEC3] text-[#f66151] dark:bg-[#f8746b] dark:text-[#ffd3c9] flex gap-1'>
         <Star
           className='dark:fill-[#FFC94A] fill-[#f8746b]'
@@ -113,17 +147,13 @@ const CardPersonOfTheMonth = () => (
         2025
       </div>
     </div>
-
-    {/* Content */}
     <div className='p-4'>
-      <p className='text-xs font-semibold uppercase tracking-wider mb-1 text-[#0D40E7] dark:text-[#3663f6] '>
+      <p className='text-xs font-semibold uppercase tracking-wider mb-1 text-[#0D40E7] dark:text-[#3663f6]'>
         Person of the Year
       </p>
       <h3 className='text-lg font-bold mb-3 text-foreground'>
         Isabel Novais Machado
       </h3>
-
-      {/* Links */}
       <div className='flex flex-col gap-2'>
         <Link
           href='https://www.linkedin.com/feed/update/urn:li:activity:7424848804094418944'

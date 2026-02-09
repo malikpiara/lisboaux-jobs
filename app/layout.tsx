@@ -4,7 +4,6 @@ import './globals.css';
 import { PostHogProvider } from './providers/PostHogProvider';
 import { Motto } from '@/components/motto';
 import { Toaster } from '@/components/ui/sonner';
-import { NavigationProvider } from '@/components/NavigationTransition';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,12 +30,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // ViewTransitions wraps <html>. This is the library's only
+    // requirement — it intercepts route changes at the top level.
+
     <html lang='en' className='[scrollbar-gutter:stable]'>
       <PostHogProvider>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <NavigationProvider>{children}</NavigationProvider>
+          {children}
           <Motto />
           <Toaster />
         </body>

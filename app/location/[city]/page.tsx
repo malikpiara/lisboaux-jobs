@@ -1,40 +1,32 @@
-import { TransitionLink as Link } from '@/components/TransitionLink';
+import Link from 'next/link';
 import { Job } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
-import { JobList } from '@/components/JobList';
-import { CityFilterInline } from '@/components/CityFilterInline';
+import { FilterableJobBoard } from '@/components/FilterableJobBoard';
 import { Suspense, cache } from 'react';
 import { Metadata } from 'next';
-import { PageTransition } from '@/components/PageTransition';
 
 export const dynamic = 'force-dynamic';
 
 // ─── DATA FETCHING ────────────────────────────────────────────────
-// cache() deduplicates within a single request — generateMetadata
-// and the page component share the same result without hitting
-// the database twice.
-const getJobsByCity = cache(async (city: string): Promise<Job[]> => {
+// Fetch ALL jobs (not filtered). The client filters in memory.
+// cache() deduplicates within a single request so generateMetadata
+// and the page component share the same result.
+const getAllJobs = cache(async (): Promise<Job[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('jobs')
     .select('*')
-    .ilike('location', `%${city}%`)
     .order('submitted_on', { ascending: false });
 
   if (error) {
-    console.error('Error fetching jobs by city:', error);
+    console.error('Error fetching jobs:', error);
     return [];
   }
 
   return data ?? [];
 });
 
-// ─── FETCH DISTINCT CITIES WITH COUNTS ────────────────────────────
-// Queries all active jobs and groups by location to build the
-// picker options. Returns sorted by count (most jobs first).
-// Also wrapped in cache() since generateMetadata could call it too
-// if we ever want city counts in the meta description.
 const getCitiesWithCounts = cache(
   async (): Promise<{ name: string; count: number }[]> => {
     const supabase = await createClient();
@@ -49,7 +41,6 @@ const getCitiesWithCounts = cache(
       return [];
     }
 
-    // Group by location and count occurrences
     const counts: Record<string, number> = {};
     for (const job of data ?? []) {
       const loc = job.location ?? 'Unknown';
@@ -72,12 +63,16 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { city } = await params;
   const decodedCity = decodeURIComponent(city).replace(/-/g, ' ');
-  const jobs = await getJobsByCity(decodedCity);
+  const jobs = await getAllJobs();
 
   const displayCity =
     decodedCity.charAt(0).toUpperCase() + decodedCity.slice(1);
 
-  const activeCount = jobs.filter((j) => j.is_active).length;
+  const activeCount = jobs.filter(
+    (j) =>
+      j.is_active && j.location.toLowerCase() === decodedCity.toLowerCase(),
+  ).length;
+
   const slug = city.toLowerCase();
 
   return {
@@ -94,46 +89,46 @@ export default async function LocationPage({ params }: PageProps) {
   const { city } = await params;
   const decodedCity = decodeURIComponent(city).replace(/-/g, ' ');
 
-  // Fetch jobs and city options in parallel
   const [jobs, cities] = await Promise.all([
-    getJobsByCity(decodedCity),
+    getAllJobs(),
     getCitiesWithCounts(),
   ]);
+
+  // ─── JSON-LD STRUCTURED DATA ────────────────────────────────────
+  const cityJobs = jobs.filter(
+    (j) =>
+      j.is_active && j.location.toLowerCase() === decodedCity.toLowerCase(),
+  );
 
   const displayCity =
     decodedCity.charAt(0).toUpperCase() + decodedCity.slice(1);
 
-  const activeCount = jobs.filter((j) => j.is_active).length;
-
-  // ─── JSON-LD STRUCTURED DATA ────────────────────────────────────
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: `Design Jobs in ${displayCity}`,
-    numberOfItems: activeCount,
-    itemListElement: jobs
-      .filter((j) => j.is_active)
-      .map((job, index) => ({
-        '@type': 'ListItem',
-        position: index + 1,
-        item: {
-          '@type': 'JobPosting',
-          title: job.title,
-          hiringOrganization: {
-            '@type': 'Organization',
-            name: job.company,
-          },
-          jobLocation: {
-            '@type': 'Place',
-            address: {
-              '@type': 'PostalAddress',
-              addressLocality: job.location,
-              addressCountry: 'PT',
-            },
-          },
-          datePosted: job.submitted_on,
+    numberOfItems: cityJobs.length,
+    itemListElement: cityJobs.map((job, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'JobPosting',
+        title: job.title,
+        hiringOrganization: {
+          '@type': 'Organization',
+          name: job.company,
         },
-      })),
+        jobLocation: {
+          '@type': 'Place',
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: job.location,
+            addressCountry: 'PT',
+          },
+        },
+        datePosted: job.submitted_on,
+      },
+    })),
   };
 
   return (
@@ -150,23 +145,13 @@ export default async function LocationPage({ params }: PageProps) {
           </div>
         </header>
 
-        <PageTransition>
-          <div className='w-full flex items-center justify-between py-4 px-2'>
-            <h1 className='text-lg font-semibold text-foreground'>
-              Design Jobs in{' '}
-              <CityFilterInline currentCity={displayCity} cities={cities} />
-            </h1>
-            <p className='text-sm text-muted-foreground'>
-              {activeCount} active {activeCount === 1 ? 'job' : 'jobs'}
-            </p>
-          </div>
-
-          <main className='w-full bg-background rounded-b-sm'>
-            <Suspense fallback={<div>Loading...</div>}>
-              <JobList jobs={jobs} sourcePageType='location' />
-            </Suspense>
-          </main>
-        </PageTransition>
+        <Suspense fallback={<div>Loading...</div>}>
+          <FilterableJobBoard
+            allJobs={jobs}
+            initialFilter={{ type: 'location', value: decodedCity }}
+            cities={cities}
+          />
+        </Suspense>
       </div>
     </div>
   );

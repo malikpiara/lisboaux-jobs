@@ -1,34 +1,54 @@
-import { TransitionLink as Link } from '@/components/TransitionLink';
+import Link from 'next/link';
 import { Job } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
-import { JobList } from '@/components/JobList';
+import { FilterableJobBoard } from '@/components/FilterableJobBoard';
 import { Suspense, cache } from 'react';
 import { Metadata } from 'next';
-import { PageTransition } from '@/components/PageTransition';
 
 export const dynamic = 'force-dynamic';
 
 // ─── DATA FETCHING ────────────────────────────────────────────────
-// cache() deduplicates this call within a single request.
-// Both generateMetadata and the page component call this with
-// the same argument — the second call returns the memoized result
-// instead of hitting the database again.
-const getJobsByCompany = cache(async (company: string): Promise<Job[]> => {
+const getAllJobs = cache(async (): Promise<Job[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('jobs')
     .select('*')
-    .ilike('company', `%${company}%`)
     .order('submitted_on', { ascending: false });
 
   if (error) {
-    console.error('Error fetching jobs by company:', error);
+    console.error('Error fetching jobs:', error);
     return [];
   }
 
   return data ?? [];
 });
+
+const getCitiesWithCounts = cache(
+  async (): Promise<{ name: string; count: number }[]> => {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('location')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching city counts:', error);
+      return [];
+    }
+
+    const counts: Record<string, number> = {};
+    for (const job of data ?? []) {
+      const loc = job.location ?? 'Unknown';
+      counts[loc] = (counts[loc] || 0) + 1;
+    }
+
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  },
+);
 
 // ─── SEO: DYNAMIC METADATA ───────────────────────────────────────
 type PageProps = {
@@ -40,14 +60,19 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { company } = await params;
   const decodedCompany = decodeURIComponent(company).replace(/-/g, ' ');
-  const jobs = await getJobsByCompany(decodedCompany);
+  const jobs = await getAllJobs();
+
+  const companyJobs = jobs.filter(
+    (j) =>
+      j.is_active && j.company.toLowerCase() === decodedCompany.toLowerCase(),
+  );
 
   const displayCompany =
-    jobs.length > 0
-      ? jobs[0].company
+    companyJobs.length > 0
+      ? companyJobs[0].company
       : decodedCompany.replace(/\b\w/g, (char) => char.toUpperCase());
 
-  const activeCount = jobs.filter((j) => j.is_active).length;
+  const activeCount = companyJobs.length;
   const slug = company.toLowerCase();
 
   return {
@@ -63,44 +88,49 @@ export async function generateMetadata({
 export default async function CompanyPage({ params }: PageProps) {
   const { company } = await params;
   const decodedCompany = decodeURIComponent(company).replace(/-/g, ' ');
-  const jobs = await getJobsByCompany(decodedCompany);
 
-  const displayCompany =
-    jobs.length > 0
-      ? jobs[0].company
-      : decodedCompany.replace(/\b\w/g, (char) => char.toUpperCase());
-
-  const activeCount = jobs.filter((j) => j.is_active).length;
+  const [jobs, cities] = await Promise.all([
+    getAllJobs(),
+    getCitiesWithCounts(),
+  ]);
 
   // ─── JSON-LD STRUCTURED DATA ────────────────────────────────────
+  const companyJobs = jobs.filter(
+    (j) =>
+      j.is_active && j.company.toLowerCase() === decodedCompany.toLowerCase(),
+  );
+
+  const displayCompany =
+    companyJobs.length > 0
+      ? companyJobs[0].company
+      : decodedCompany.replace(/\b\w/g, (char) => char.toUpperCase());
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: `Design Jobs at ${displayCompany}`,
-    numberOfItems: activeCount,
-    itemListElement: jobs
-      .filter((j) => j.is_active)
-      .map((job, index) => ({
-        '@type': 'ListItem',
-        position: index + 1,
-        item: {
-          '@type': 'JobPosting',
-          title: job.title,
-          hiringOrganization: {
-            '@type': 'Organization',
-            name: job.company,
-          },
-          jobLocation: {
-            '@type': 'Place',
-            address: {
-              '@type': 'PostalAddress',
-              addressLocality: job.location,
-              addressCountry: 'PT',
-            },
-          },
-          datePosted: job.submitted_on,
+    numberOfItems: companyJobs.length,
+    itemListElement: companyJobs.map((job, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'JobPosting',
+        title: job.title,
+        hiringOrganization: {
+          '@type': 'Organization',
+          name: job.company,
         },
-      })),
+        jobLocation: {
+          '@type': 'Place',
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: job.location,
+            addressCountry: 'PT',
+          },
+        },
+        datePosted: job.submitted_on,
+      },
+    })),
   };
 
   return (
@@ -116,46 +146,14 @@ export default async function CompanyPage({ params }: PageProps) {
             <Link href='/'>Design Jobs</Link>
           </div>
         </header>
-        <PageTransition>
-          <div className='w-full flex items-center justify-between py-4 px-2'>
-            <h1 className='text-lg font-semibold text-foreground'>
-              Design Jobs at{' '}
-              <span className='inline-flex items-baseline gap-1.5'>
-                <span className='text-primary border-b border-dashed border-primary/60'>
-                  {displayCompany}
-                </span>
-                <Link
-                  href='/'
-                  className='opacity-30 hover:opacity-100 transition-opacity text-muted-foreground'
-                  aria-label={`Clear ${displayCompany} filter`}
-                >
-                  <svg
-                    className='w-3.5 h-3.5 relative top-px'
-                    fill='none'
-                    viewBox='0 0 24 24'
-                    stroke='currentColor'
-                    strokeWidth={2.5}
-                  >
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      d='M6 18L18 6M6 6l12 12'
-                    />
-                  </svg>
-                </Link>
-              </span>
-            </h1>
-            <p className='text-sm text-muted-foreground'>
-              {activeCount} active {activeCount === 1 ? 'job' : 'jobs'}
-            </p>
-          </div>
 
-          <main className='w-full bg-background rounded-b-sm'>
-            <Suspense fallback={<div>Loading...</div>}>
-              <JobList jobs={jobs} sourcePageType='company' />
-            </Suspense>
-          </main>
-        </PageTransition>
+        <Suspense fallback={<div>Loading...</div>}>
+          <FilterableJobBoard
+            allJobs={jobs}
+            initialFilter={{ type: 'company', value: decodedCompany }}
+            cities={cities}
+          />
+        </Suspense>
       </div>
     </div>
   );
