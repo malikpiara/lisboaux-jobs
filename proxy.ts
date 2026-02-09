@@ -14,7 +14,7 @@ import { updateSession } from '@/lib/supabase/middleware';
  * - Route protection (redirect unauthenticated users from /admin)
  * - Role-based access control
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }
 
