@@ -140,7 +140,7 @@ export default async function CompanyPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className='flex w-full max-w-195 flex-col items-center py-4 px-3 sm:px-16 bg-background sm:items-start'>
+      <div className='flex w-full max-w-195 flex-col items-center py-4 px-2 sm:px-16 bg-background sm:items-start'>
         <header className='w-full bg-[#0237CF] text-white p-2 rounded-lg'>
           <div className='font-semibold ml-1 flex gap-3'>
             <Link href='/'>Design Jobs</Link>
